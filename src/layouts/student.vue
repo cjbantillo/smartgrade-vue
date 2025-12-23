@@ -1,48 +1,63 @@
+/** * Student Layout * Layout for students with read-only access to their
+academic records */
+
 <template>
   <v-app>
-    <v-navigation-drawer permanent>
-      <v-list>
-        <v-list-item prepend-icon="mdi-account-school" title="Student Portal" />
-      </v-list>
+    <NavigationDrawer
+      header-icon="mdi-account-school"
+      header-title="Student Portal"
+      :items="navigationItems"
+      @logout="handleLogout"
+    />
 
-      <v-divider />
-
-      <v-list nav>
-        <v-list-item
-          prepend-icon="mdi-view-dashboard"
-          title="Dashboard"
-          to="/student/dashboard"
-          value="dashboard"
-        />
-        <v-list-item
-          prepend-icon="mdi-clipboard-text"
-          title="My Grades"
-          to="/student/grades"
-          value="grades"
-        />
-        <v-list-item
-          prepend-icon="mdi-trophy"
-          title="Honors & Awards"
-          to="/student/honors"
-          value="honors"
-        />
-      </v-list>
-    </v-navigation-drawer>
-
-    <v-app-bar color="primary" elevation="1">
-      <v-app-bar-title>SmartGrade - Student</v-app-bar-title>
-      <v-spacer />
-      <v-btn icon="mdi-account-circle" />
-    </v-app-bar>
+    <AppHeader icon="mdi-account-school" title="SmartGrade - Student" />
 
     <v-main>
       <v-container fluid>
         <router-view />
       </v-container>
     </v-main>
+
+    <AppFooter />
   </v-app>
 </template>
 
 <script lang="ts" setup>
-//
+import type { NavigationItem } from "@/components/layout/NavigationDrawer.vue";
+import AppFooter from "@/components/layout/AppFooter.vue";
+import AppHeader from "@/components/layout/AppHeader.vue";
+import NavigationDrawer from "@/components/layout/NavigationDrawer.vue";
+
+const navigationItems: NavigationItem[] = [
+  {
+    title: "Dashboard",
+    icon: "mdi-view-dashboard",
+    to: "/student",
+    value: "dashboard",
+  },
+  {
+    title: "My Grades",
+    icon: "mdi-clipboard-text",
+    to: "/student/grades",
+    value: "grades",
+  },
+  {
+    title: "Honors & Awards",
+    icon: "mdi-trophy",
+    to: "/student/honors",
+    value: "honors",
+  },
+  {
+    title: "Report Cards",
+    icon: "mdi-file-document-outline",
+    to: "/student/reports",
+    value: "reports",
+  },
+];
+
+// Placeholder logout handler - will be implemented with Supabase in Phase 2
+function handleLogout() {
+  console.log("[Student] Logout clicked - will implement with Supabase auth");
+  // In Phase 2: await supabase.auth.signOut()
+}
 </script>

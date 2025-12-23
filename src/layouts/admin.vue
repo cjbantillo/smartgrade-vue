@@ -1,48 +1,68 @@
+/** * Admin Layout * Layout for administrative users with full system access */
+
 <template>
   <v-app>
-    <v-navigation-drawer permanent>
-      <v-list>
-        <v-list-item prepend-icon="mdi-shield-crown" title="Admin Dashboard" />
-      </v-list>
+    <NavigationDrawer
+      header-icon="mdi-shield-crown"
+      header-title="Admin Dashboard"
+      :items="navigationItems"
+      @logout="handleLogout"
+    />
 
-      <v-divider />
-
-      <v-list nav>
-        <v-list-item
-          prepend-icon="mdi-account-group"
-          title="User Management"
-          to="/admin/users"
-          value="users"
-        />
-        <v-list-item
-          prepend-icon="mdi-school"
-          title="School Years"
-          to="/admin/school-years"
-          value="school-years"
-        />
-        <v-list-item
-          prepend-icon="mdi-cog"
-          title="Settings"
-          to="/admin/settings"
-          value="settings"
-        />
-      </v-list>
-    </v-navigation-drawer>
-
-    <v-app-bar color="primary" elevation="1">
-      <v-app-bar-title>SmartGrade - Admin</v-app-bar-title>
-      <v-spacer />
-      <v-btn icon="mdi-account-circle" />
-    </v-app-bar>
+    <AppHeader icon="mdi-shield-crown" title="SmartGrade - Admin" />
 
     <v-main>
       <v-container fluid>
         <router-view />
       </v-container>
     </v-main>
+
+    <AppFooter />
   </v-app>
 </template>
 
 <script lang="ts" setup>
-//
+import type { NavigationItem } from "@/components/layout/NavigationDrawer.vue";
+import AppFooter from "@/components/layout/AppFooter.vue";
+import AppHeader from "@/components/layout/AppHeader.vue";
+import NavigationDrawer from "@/components/layout/NavigationDrawer.vue";
+
+const navigationItems: NavigationItem[] = [
+  {
+    title: "Dashboard",
+    icon: "mdi-view-dashboard",
+    to: "/admin",
+    value: "dashboard",
+  },
+  {
+    title: "User Management",
+    icon: "mdi-account-group",
+    to: "/admin/users",
+    value: "users",
+  },
+  {
+    title: "School Years",
+    icon: "mdi-calendar-range",
+    to: "/admin/school-years",
+    value: "school-years",
+  },
+  {
+    title: "Sections & Classes",
+    icon: "mdi-google-classroom",
+    to: "/admin/sections",
+    value: "sections",
+  },
+  {
+    title: "Settings",
+    icon: "mdi-cog",
+    to: "/admin/settings",
+    value: "settings",
+  },
+];
+
+// Placeholder logout handler - will be implemented with Supabase in Phase 2
+function handleLogout() {
+  console.log("[Admin] Logout clicked - will implement with Supabase auth");
+  // In Phase 2: await supabase.auth.signOut()
+}
 </script>

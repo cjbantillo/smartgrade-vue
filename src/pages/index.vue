@@ -3,7 +3,7 @@
     class="d-flex flex-column align-center justify-center"
     style="min-height: 80vh"
   >
-    <v-icon size="120" color="primary" class="mb-6"> mdi-school </v-icon>
+    <v-icon class="mb-6" color="primary" size="120"> mdi-school </v-icon>
 
     <h1 class="text-h3 mb-4">SmartGrade</h1>
     <p class="text-h6 text-medium-emphasis mb-8">
@@ -18,9 +18,9 @@
         <v-col cols="12" md="4">
           <v-btn
             block
-            size="large"
             color="primary"
             prepend-icon="mdi-shield-crown"
+            size="large"
             to="/admin"
           >
             Admin
@@ -29,9 +29,9 @@
         <v-col cols="12" md="4">
           <v-btn
             block
-            size="large"
             color="primary"
             prepend-icon="mdi-school"
+            size="large"
             to="/teacher"
           >
             Teacher
@@ -40,9 +40,9 @@
         <v-col cols="12" md="4">
           <v-btn
             block
-            size="large"
             color="primary"
             prepend-icon="mdi-account-school"
+            size="large"
             to="/student"
           >
             Student

@@ -1,25 +1,51 @@
-# Vuetify (Default)
+# SmartGrade - Automated Grading System
 
-This is the official scaffolding tool for Vuetify, designed to give you a head start in building your new Vuetify application. It sets up a base template with all the necessary configurations and standard directory structure, enabling you to begin development without the hassle of setting up the project from scratch.
+**Automated Grading System for Ampayon National High School - Senior High School**
 
-## ❗️ Important Links
+A modern, role-based academic management system built with Vue 3, TypeScript, Vuetify, and Supabase.
 
-- 📄 [Docs](https://vuetifyjs.com/)
-- 🚨 [Issues](https://issues.vuetifyjs.com/)
-- 🏬 [Store](https://store.vuetifyjs.com/)
-- 🎮 [Playground](https://play.vuetifyjs.com/)
-- 💬 [Discord](https://community.vuetifyjs.com)
+## 🎯 Project Overview
+
+SmartGrade is a comprehensive grading and academic management system designed specifically for DepEd Senior High School requirements, including:
+
+- Automated grade computation and finalization
+- SF9/SF10 document generation
+- Honors and awards computation (With Honors, High Honors, Highest Honors)
+- Role-based access control (Admin, Teacher, Student)
+- Email-only authentication (@deped.gov.ph)
+
+## 📚 Documentation
+
+- **[Phase 1 Architecture](./docs/phase-1-architecture.md)** - Routing and layout system
+- **[Step One Process](./step-one-process.md)** - Initial development guidelines
+- **[Policy Adjustments](./step-one-policy-adjustments.md)** - DepEd-specific rules
+
+## 🏗️ Architecture
+
+### Tech Stack
+
+- **Frontend**: Vue 3 (Composition API) + TypeScript
+- **UI Framework**: Vuetify 3 + Tailwind CSS
+- **State Management**: Pinia
+- **Backend**: Supabase (PostgreSQL + Auth)
+- **Build Tool**: Vite
+
+### Role-Based Access
+
+- **Admin**: Full system access, user management, school configuration
+- **Teacher**: Class management, grade entry, document generation
+- **Student**: Read-only access to personal academic records
 
 ## 💿 Install
 
-Set up your project using your preferred package manager. Use the corresponding command to install the dependencies:
+Set up your project using your preferred package manager:
 
-| Package Manager                                                | Command        |
-|---------------------------------------------------------------|----------------|
-| [yarn](https://yarnpkg.com/getting-started)                   | `yarn install` |
-| [npm](https://docs.npmjs.com/cli/v7/commands/npm-install)     | `npm install`  |
-| [pnpm](https://pnpm.io/installation)                          | `pnpm install` |
-| [bun](https://bun.sh/#getting-started)                        | `bun install`  |
+| Package Manager                                           | Command        |
+| --------------------------------------------------------- | -------------- |
+| [yarn](https://yarnpkg.com/getting-started)               | `yarn install` |
+| [npm](https://docs.npmjs.com/cli/v7/commands/npm-install) | `npm install`  |
+| [pnpm](https://pnpm.io/installation)                      | `pnpm install` |
+| [bun](https://bun.sh/#getting-started)                    | `bun install`  |
 
 After completing the installation, your environment is ready for Vuetify development.
 
@@ -76,6 +102,7 @@ This project is built with [Vuetify](https://vuetifyjs.com/en/), a UI Library wi
 - [Making a one-time donation with Paypal](https://paypal.me/vuetify)
 
 ## 📑 License
+
 [MIT](http://opensource.org/licenses/MIT)
 
 Copyright (c) 2016-present Vuetify, LLC

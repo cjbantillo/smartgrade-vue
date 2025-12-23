@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar elevation="1" color="primary">
+    <v-app-bar color="primary" elevation="1">
       <v-app-bar-title>SmartGrade</v-app-bar-title>
     </v-app-bar>
 
