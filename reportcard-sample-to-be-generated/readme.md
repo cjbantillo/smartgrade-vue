@@ -1,1 +1,0 @@
-this SF9 and SF10 should only appear in Adviser side
