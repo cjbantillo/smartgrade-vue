@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-6">
+  <v-container class="pa-6" fluid>
     <!-- Header -->
     <v-row>
       <v-col cols="12">
@@ -12,12 +12,12 @@
 
     <!-- Loading State -->
     <v-row v-if="loading">
-      <v-col cols="12" class="text-center py-12">
+      <v-col class="text-center py-12" cols="12">
         <v-progress-circular
-          indeterminate
           color="primary"
+          indeterminate
           size="64"
-        ></v-progress-circular>
+        />
         <p class="text-h6 mt-4">Loading your documents...</p>
       </v-col>
     </v-row>
@@ -68,16 +68,16 @@
               <p class="text-body-2 text-medium-emphasis mb-4">
                 Quarterly grades and performance report
               </p>
-              <v-chip color="success" variant="tonal" size="small">
-                <v-icon start size="small">mdi-check-circle</v-icon>
+              <v-chip color="success" size="small" variant="tonal">
+                <v-icon size="small" start>mdi-check-circle</v-icon>
                 Available
               </v-chip>
             </v-card-text>
             <v-card-actions>
               <v-btn
+                block
                 color="primary"
                 prepend-icon="mdi-eye"
-                block
                 @click.stop="viewSF9(doc.school_year_id)"
               >
                 View Document
@@ -88,7 +88,7 @@
       </v-row>
 
       <!-- SF10 Document -->
-      <v-row class="mt-6" v-if="sf10Document">
+      <v-row v-if="sf10Document" class="mt-6">
         <v-col cols="12">
           <h2 class="text-h5 font-weight-bold mb-4">
             <v-icon class="mr-2">mdi-folder-open</v-icon>
@@ -107,16 +107,16 @@
                 Comprehensive record of all your academic achievements across
                 all school years
               </p>
-              <v-chip color="success" variant="tonal" size="small">
-                <v-icon start size="small">mdi-check-circle</v-icon>
+              <v-chip color="success" size="small" variant="tonal">
+                <v-icon size="small" start>mdi-check-circle</v-icon>
                 Available
               </v-chip>
             </v-card-text>
             <v-card-actions>
               <v-btn
+                block
                 color="secondary"
                 prepend-icon="mdi-eye"
-                block
                 @click.stop="viewSF10"
               >
                 View Document
@@ -132,7 +132,7 @@
           <v-card color="blue-lighten-5">
             <v-card-text class="pa-6">
               <h3 class="text-h6 font-weight-bold mb-3">
-                <v-icon start color="info">mdi-information</v-icon>
+                <v-icon color="info" start>mdi-information</v-icon>
                 About Your Documents
               </h3>
               <p class="text-body-2 mb-2">
@@ -163,48 +163,48 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useStudent, type StudentDocument } from "@/composables/useStudent";
+  import { computed, onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { type StudentDocument, useStudent } from '@/composables/useStudent'
 
-const router = useRouter();
-const { loading, error, fetchStudentDocuments, getStudentId } = useStudent();
+  const router = useRouter()
+  const { loading, error, fetchStudentDocuments, getStudentId } = useStudent()
 
-// Component state
-const documents = ref<StudentDocument[]>([]);
-const studentId = ref<string | null>(null);
+  // Component state
+  const documents = ref<StudentDocument[]>([])
+  const studentId = ref<string | null>(null)
 
-// Computed properties
-const sf9Documents = computed(() => {
-  return documents.value.filter((doc) => doc.type === "SF9");
-});
+  // Computed properties
+  const sf9Documents = computed(() => {
+    return documents.value.filter(doc => doc.type === 'SF9')
+  })
 
-const sf10Document = computed(() => {
-  return documents.value.find((doc) => doc.type === "SF10");
-});
+  const sf10Document = computed(() => {
+    return documents.value.find(doc => doc.type === 'SF10')
+  })
 
-// Methods
-function viewSF9(schoolYearId: string) {
-  if (studentId.value) {
-    router.push(`/teacher/documents/sf9/${studentId.value}/${schoolYearId}`);
+  // Methods
+  function viewSF9 (schoolYearId: string) {
+    if (studentId.value) {
+      router.push(`/teacher/documents/sf9/${studentId.value}/${schoolYearId}`)
+    }
   }
-}
 
-function viewSF10() {
-  if (studentId.value) {
-    router.push(`/teacher/documents/sf10/${studentId.value}`);
+  function viewSF10 () {
+    if (studentId.value) {
+      router.push(`/teacher/documents/sf10/${studentId.value}`)
+    }
   }
-}
 
-async function loadDocuments() {
-  studentId.value = await getStudentId();
-  const docs = await fetchStudentDocuments();
-  documents.value = docs;
-}
+  async function loadDocuments () {
+    studentId.value = await getStudentId()
+    const docs = await fetchStudentDocuments()
+    documents.value = docs
+  }
 
-onMounted(() => {
-  loadDocuments();
-});
+  onMounted(() => {
+    loadDocuments()
+  })
 </script>
 
 <route lang="yaml">

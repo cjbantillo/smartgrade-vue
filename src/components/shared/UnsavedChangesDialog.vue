@@ -25,47 +25,47 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from "vue";
+  import { computed, ref } from 'vue'
 
-export interface UnsavedChangesDialogProps {
-  modelValue: boolean;
-}
-
-const props = defineProps<UnsavedChangesDialogProps>();
-
-const emit = defineEmits<{
-  "update:modelValue": [value: boolean];
-  save: [];
-  discard: [];
-  stay: [];
-}>();
-
-const saving = ref(false);
-
-const show = computed({
-  get: () => props.modelValue,
-  set: (value) => emit("update:modelValue", value),
-});
-
-async function handleSave() {
-  saving.value = true;
-  try {
-    emit("save");
-  } finally {
-    // Keep loading state - parent will close dialog after save
-    setTimeout(() => {
-      saving.value = false;
-    }, 300);
+  export interface UnsavedChangesDialogProps {
+    modelValue: boolean
   }
-}
 
-function handleDiscard() {
-  emit("discard");
-  show.value = false;
-}
+  const props = defineProps<UnsavedChangesDialogProps>()
 
-function handleStay() {
-  emit("stay");
-  show.value = false;
-}
+  const emit = defineEmits<{
+    'update:modelValue': [value: boolean]
+    'save': []
+    'discard': []
+    'stay': []
+  }>()
+
+  const saving = ref(false)
+
+  const show = computed({
+    get: () => props.modelValue,
+    set: value => emit('update:modelValue', value),
+  })
+
+  async function handleSave () {
+    saving.value = true
+    try {
+      emit('save')
+    } finally {
+      // Keep loading state - parent will close dialog after save
+      setTimeout(() => {
+        saving.value = false
+      }, 300)
+    }
+  }
+
+  function handleDiscard () {
+    emit('discard')
+    show.value = false
+  }
+
+  function handleStay () {
+    emit('stay')
+    show.value = false
+  }
 </script>

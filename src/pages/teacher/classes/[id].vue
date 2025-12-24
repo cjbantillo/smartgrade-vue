@@ -9,10 +9,10 @@ meta:
     <v-row class="mb-4">
       <v-col>
         <v-btn
-          variant="text"
-          prepend-icon="mdi-arrow-left"
-          @click="$router.push('/teacher/classes')"
           class="mb-2"
+          prepend-icon="mdi-arrow-left"
+          variant="text"
+          @click="$router.push('/teacher/classes')"
         >
           Back to Classes
         </v-btn>
@@ -31,8 +31,8 @@ meta:
       <v-col>
         <v-btn
           color="primary"
-          size="large"
           prepend-icon="mdi-pencil-box-outline"
+          size="large"
           @click="$router.push(`/teacher/classes/${classId}/grades`)"
         >
           Manage Grades
@@ -52,7 +52,7 @@ meta:
                 </p>
                 <h2 class="text-h4">{{ students.length }}</h2>
               </div>
-              <v-icon size="40" color="primary">mdi-account-group</v-icon>
+              <v-icon color="primary" size="40">mdi-account-group</v-icon>
             </div>
           </v-card-text>
         </v-card>
@@ -72,14 +72,14 @@ meta:
               <v-col cols="12" md="8">
                 <v-text-field
                   v-model="searchQuery"
-                  label="Search by LRN, First Name, or Last Name"
-                  prepend-icon="mdi-magnify"
-                  placeholder="Enter at least 2 characters"
                   clearable
-                  @input="handleSearch"
                   hint="Search for students by their LRN or name"
+                  label="Search by LRN, First Name, or Last Name"
                   persistent-hint
-                ></v-text-field>
+                  placeholder="Enter at least 2 characters"
+                  prepend-icon="mdi-magnify"
+                  @input="handleSearch"
+                />
               </v-col>
             </v-row>
 
@@ -89,10 +89,10 @@ meta:
               <v-list-item
                 v-for="student in searchResults"
                 :key="student.id"
-                @click="handleEnrollStudent(student.id)"
                 :disabled="loading"
+                @click="handleEnrollStudent(student.id)"
               >
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-avatar color="primary">
                     <v-icon>mdi-account</v-icon>
                   </v-avatar>
@@ -111,14 +111,14 @@ meta:
                   • Grade {{ student.grade_level }}
                 </v-list-item-subtitle>
 
-                <template v-slot:append>
+                <template #append>
                   <v-btn
                     color="success"
-                    variant="text"
                     icon="mdi-plus"
-                    @click.stop="handleEnrollStudent(student.id)"
                     :loading="loading"
-                  ></v-btn>
+                    variant="text"
+                    @click.stop="handleEnrollStudent(student.id)"
+                  />
                 </template>
               </v-list-item>
             </v-list>
@@ -126,32 +126,32 @@ meta:
             <v-alert
               v-if="
                 searchQuery &&
-                searchQuery.length >= 2 &&
-                searchResults.length === 0 &&
-                !searchLoading
+                  searchQuery.length >= 2 &&
+                  searchResults.length === 0 &&
+                  !searchLoading
               "
-              type="info"
               class="mt-4"
+              type="info"
             >
               No students found matching "{{ searchQuery }}"
             </v-alert>
 
             <v-progress-linear
               v-if="searchLoading"
-              indeterminate
-              color="primary"
               class="mt-4"
-            ></v-progress-linear>
+              color="primary"
+              indeterminate
+            />
 
-            <v-alert v-if="error" type="error" class="mt-4">
+            <v-alert v-if="error" class="mt-4" type="error">
               {{ error }}
             </v-alert>
 
             <v-alert
               v-if="successMessage"
-              type="success"
               class="mt-4"
               closable
+              type="success"
               @click:close="successMessage = ''"
             >
               {{ successMessage }}
@@ -174,9 +174,10 @@ meta:
             v-if="students.length === 0 && !loading"
             class="text-center pa-8"
           >
-            <v-icon size="80" color="grey-lighten-1"
-              >mdi-account-group-outline</v-icon
-            >
+            <v-icon
+              color="grey-lighten-1"
+              size="80"
+            >mdi-account-group-outline</v-icon>
             <h3 class="text-h6 mt-4 mb-2">No Students Enrolled</h3>
             <p class="text-grey-darken-1">
               Use the search above to find and enroll students in this class.
@@ -219,10 +220,11 @@ meta:
                 <td>{{ formatDate(student.enrolled_at) }}</td>
                 <td>
                   <v-btn
-                    size="small"
                     color="error"
-                    variant="text"
                     icon="mdi-delete"
+                    :loading="loading"
+                    size="small"
+                    variant="text"
                     @click="
                       handleUnenrollStudent(
                         student.id,
@@ -230,8 +232,7 @@ meta:
                         student.last_name
                       )
                     "
-                    :loading="loading"
-                  ></v-btn>
+                  />
                 </td>
               </tr>
             </tbody>
@@ -239,9 +240,9 @@ meta:
 
           <v-progress-linear
             v-if="loading"
-            indeterminate
             color="primary"
-          ></v-progress-linear>
+            indeterminate
+          />
         </v-card>
       </v-col>
     </v-row>
@@ -257,21 +258,21 @@ meta:
             Are you sure you want to remove
             <strong>{{ unenrollStudentName }}</strong> from this class?
           </p>
-          <v-alert type="warning" class="mt-4">
+          <v-alert class="mt-4" type="warning">
             This action cannot be undone. The student will need to be
             re-enrolled manually.
           </v-alert>
         </v-card-text>
         <v-card-actions>
-          <v-spacer></v-spacer>
+          <v-spacer />
           <v-btn
+            :disabled="loading"
             variant="text"
             @click="unenrollDialog = false"
-            :disabled="loading"
           >
             Cancel
           </v-btn>
-          <v-btn color="error" @click="confirmUnenroll" :loading="loading">
+          <v-btn color="error" :loading="loading" @click="confirmUnenroll">
             Remove Student
           </v-btn>
         </v-card-actions>
@@ -281,117 +282,117 @@ meta:
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import { useTeacher } from "@/composables/useTeacher";
+  import { onMounted, ref } from 'vue'
+  import { useRoute } from 'vue-router'
+  import { useTeacher } from '@/composables/useTeacher'
 
-const route = useRoute();
-const {
-  loading,
-  error,
-  fetchTeacherClasses,
-  fetchClassStudents,
-  searchStudents,
-  enrollStudent,
-  unenrollStudent,
-} = useTeacher();
+  const route = useRoute()
+  const {
+    loading,
+    error,
+    fetchTeacherClasses,
+    fetchClassStudents,
+    searchStudents,
+    enrollStudent,
+    unenrollStudent,
+  } = useTeacher()
 
-const classId = ref(route.params.id as string);
-const classInfo = ref<any>(null);
-const students = ref<any[]>([]);
-const searchQuery = ref("");
-const searchResults = ref<any[]>([]);
-const searchLoading = ref(false);
-const successMessage = ref("");
-const unenrollDialog = ref(false);
-const unenrollStudentId = ref("");
-const unenrollStudentName = ref("");
+  const classId = ref(route.params.id as string)
+  const classInfo = ref<any>(null)
+  const students = ref<any[]>([])
+  const searchQuery = ref('')
+  const searchResults = ref<any[]>([])
+  const searchLoading = ref(false)
+  const successMessage = ref('')
+  const unenrollDialog = ref(false)
+  const unenrollStudentId = ref('')
+  const unenrollStudentName = ref('')
 
-async function loadClassData() {
-  // Get class info
-  const classes = await fetchTeacherClasses();
-  classInfo.value = classes.find((c) => c.id === classId.value);
+  async function loadClassData () {
+    // Get class info
+    const classes = await fetchTeacherClasses()
+    classInfo.value = classes.find(c => c.id === classId.value)
 
-  if (!classInfo.value) {
-    // Class not found or doesn't belong to this teacher
-    return;
+    if (!classInfo.value) {
+      // Class not found or doesn't belong to this teacher
+      return
+    }
+
+    // Load students
+    await loadStudents()
   }
 
-  // Load students
-  await loadStudents();
-}
-
-async function loadStudents() {
-  students.value = await fetchClassStudents(classId.value);
-}
-
-let searchTimeout: any = null;
-async function handleSearch() {
-  if (searchTimeout) {
-    clearTimeout(searchTimeout);
+  async function loadStudents () {
+    students.value = await fetchClassStudents(classId.value)
   }
 
-  if (!searchQuery.value || searchQuery.value.length < 2) {
-    searchResults.value = [];
-    return;
+  let searchTimeout: any = null
+  async function handleSearch () {
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
+    }
+
+    if (!searchQuery.value || searchQuery.value.length < 2) {
+      searchResults.value = []
+      return
+    }
+
+    searchTimeout = setTimeout(async () => {
+      searchLoading.value = true
+      searchResults.value = await searchStudents(searchQuery.value)
+      searchLoading.value = false
+    }, 300)
   }
 
-  searchTimeout = setTimeout(async () => {
-    searchLoading.value = true;
-    searchResults.value = await searchStudents(searchQuery.value);
-    searchLoading.value = false;
-  }, 300);
-}
+  async function handleEnrollStudent (studentId: string) {
+    const success = await enrollStudent(classId.value, studentId)
 
-async function handleEnrollStudent(studentId: string) {
-  const success = await enrollStudent(classId.value, studentId);
+    if (success) {
+      successMessage.value = 'Student enrolled successfully!'
+      searchQuery.value = ''
+      searchResults.value = []
+      await loadStudents()
 
-  if (success) {
-    successMessage.value = "Student enrolled successfully!";
-    searchQuery.value = "";
-    searchResults.value = [];
-    await loadStudents();
-
-    // Clear success message after 3 seconds
-    setTimeout(() => {
-      successMessage.value = "";
-    }, 3000);
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        successMessage.value = ''
+      }, 3000)
+    }
   }
-}
 
-function handleUnenrollStudent(
-  enrollmentId: string,
-  firstName: string,
-  lastName: string
-) {
-  unenrollStudentId.value = enrollmentId;
-  unenrollStudentName.value = `${firstName} ${lastName}`;
-  unenrollDialog.value = true;
-}
-
-async function confirmUnenroll() {
-  const success = await unenrollStudent(unenrollStudentId.value);
-
-  if (success) {
-    successMessage.value = "Student removed from class";
-    unenrollDialog.value = false;
-    await loadStudents();
-
-    setTimeout(() => {
-      successMessage.value = "";
-    }, 3000);
+  function handleUnenrollStudent (
+    enrollmentId: string,
+    firstName: string,
+    lastName: string,
+  ) {
+    unenrollStudentId.value = enrollmentId
+    unenrollStudentName.value = `${firstName} ${lastName}`
+    unenrollDialog.value = true
   }
-}
 
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+  async function confirmUnenroll () {
+    const success = await unenrollStudent(unenrollStudentId.value)
 
-onMounted(() => {
-  loadClassData();
-});
+    if (success) {
+      successMessage.value = 'Student removed from class'
+      unenrollDialog.value = false
+      await loadStudents()
+
+      setTimeout(() => {
+        successMessage.value = ''
+      }, 3000)
+    }
+  }
+
+  function formatDate (dateString: string) {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
+
+  onMounted(() => {
+    loadClassData()
+  })
 </script>

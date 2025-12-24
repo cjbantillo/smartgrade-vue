@@ -38,36 +38,36 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from "vue";
+  import { computed } from 'vue'
 
-export interface EmptyStateProps {
-  icon?: string;
-  iconSize?: number | string;
-  iconColor?: string;
-  title?: string;
-  text?: string;
-  description?: string;
-  action?: string;
-  actionIcon?: string;
-  actionColor?: string;
-  variant?: "flat" | "outlined" | "elevated";
-  color?: "success" | "info" | "warning" | "error" | undefined;
-}
+  export interface EmptyStateProps {
+    icon?: string
+    iconSize?: number | string
+    iconColor?: string
+    title?: string
+    text?: string
+    description?: string
+    action?: string
+    actionIcon?: string
+    actionColor?: string
+    variant?: 'flat' | 'outlined' | 'elevated'
+    color?: 'success' | 'info' | 'warning' | 'error' | undefined
+  }
 
-const props = withDefaults(defineProps<EmptyStateProps>(), {
-  icon: "mdi-information-outline",
-  iconSize: 80,
-  iconColor: "grey-lighten-1",
-  variant: "flat",
-  actionColor: "primary",
-});
+  const props = withDefaults(defineProps<EmptyStateProps>(), {
+    icon: 'mdi-information-outline',
+    iconSize: 80,
+    iconColor: 'grey-lighten-1',
+    variant: 'flat',
+    actionColor: 'primary',
+  })
 
-defineEmits<{
-  action: [];
-}>();
+  defineEmits<{
+    action: []
+  }>()
 
-const backgroundColor = computed(() => {
-  if (!props.color) return undefined;
-  return `${props.color}-lighten-5`;
-});
+  const backgroundColor = computed(() => {
+    if (!props.color) return undefined
+    return `${props.color}-lighten-5`
+  })
 </script>

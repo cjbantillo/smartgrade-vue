@@ -84,8 +84,8 @@ meta:
                 <tbody>
                   <tr>
                     <td
-                      colspan="7"
                       class="text-center text-medium-emphasis py-8"
+                      colspan="7"
                     >
                       No unlock requests at this time
                     </td>

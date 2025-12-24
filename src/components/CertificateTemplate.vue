@@ -179,6 +179,7 @@
 
   interface Props {
     certificate: CertificateWithStudent
+    verificationId?: string
   }
 
   const props = defineProps<Props>()
@@ -221,7 +222,13 @@
   })
 
   const verificationUrl = computed(() => {
-    return `${baseUrl.value}/verify?code=${props.certificate.qr_code_url}`
+    // Use verificationId prop if provided, otherwise use certificate data
+    const id = props.verificationId || props.certificate.id
+    if (id === 'preview') {
+      // For preview mode, return homepage
+      return baseUrl.value
+    }
+    return `${baseUrl.value}/verify/${id}`
   })
 
   // Methods

@@ -76,8 +76,8 @@ meta:
           <div class="text-h6">Activity Logs ({{ filteredLogs.length }})</div>
           <v-btn
             color="primary"
-            prepend-icon="mdi-refresh"
             :loading="loading"
+            prepend-icon="mdi-refresh"
             @click="loadLogs"
           >
             Refresh
@@ -199,11 +199,9 @@ meta:
                 <v-icon>mdi-database</v-icon>
               </template>
               <v-list-item-title>Entity</v-list-item-title>
-              <v-list-item-subtitle
-                >{{ selectedLog.entity_type }} ({{
-                  selectedLog.entity_id
-                }})</v-list-item-subtitle
-              >
+              <v-list-item-subtitle>{{ selectedLog.entity_type }} ({{
+                selectedLog.entity_id
+              }})</v-list-item-subtitle>
             </v-list-item>
           </v-list>
 
@@ -265,138 +263,138 @@ meta:
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
-import { supabase } from "@/services/supabase";
+  import { computed, onMounted, ref } from 'vue'
+  import { supabase } from '@/services/supabase'
 
-const loading = ref(false);
-const logs = ref<any[]>([]);
-const currentPage = ref(1);
-const itemsPerPage = 25;
-const detailsDialog = ref(false);
-const selectedLog = ref<any>(null);
+  const loading = ref(false)
+  const logs = ref<any[]>([])
+  const currentPage = ref(1)
+  const itemsPerPage = 25
+  const detailsDialog = ref(false)
+  const selectedLog = ref<any>(null)
 
-const filters = ref({
-  action: null as string | null,
-  entityType: null as string | null,
-  dateFrom: "",
-  dateTo: "",
-});
+  const filters = ref({
+    action: null as string | null,
+    entityType: null as string | null,
+    dateFrom: '',
+    dateTo: '',
+  })
 
-const actionTypes = [
-  { title: "Teacher Approved", value: "teacher_approved" },
-  { title: "Teacher Rejected", value: "teacher_rejected" },
-  { title: "Grades Finalized", value: "grades_finalized" },
-  { title: "Grades Unlocked", value: "grades_unlocked" },
-  { title: "Grades Re-finalized", value: "grades_refinalized" },
-];
+  const actionTypes = [
+    { title: 'Teacher Approved', value: 'teacher_approved' },
+    { title: 'Teacher Rejected', value: 'teacher_rejected' },
+    { title: 'Grades Finalized', value: 'grades_finalized' },
+    { title: 'Grades Unlocked', value: 'grades_unlocked' },
+    { title: 'Grades Re-finalized', value: 'grades_refinalized' },
+  ]
 
-const entityTypes = [
-  { title: "Profile", value: "profile" },
-  { title: "Grade", value: "grade" },
-  { title: "Student", value: "student" },
-  { title: "Teacher", value: "teacher" },
-];
+  const entityTypes = [
+    { title: 'Profile', value: 'profile' },
+    { title: 'Grade', value: 'grade' },
+    { title: 'Student', value: 'student' },
+    { title: 'Teacher', value: 'teacher' },
+  ]
 
-const filteredLogs = computed(() => {
-  let result = logs.value;
+  const filteredLogs = computed(() => {
+    let result = logs.value
 
-  if (filters.value.action) {
-    result = result.filter((log) => log.action === filters.value.action);
+    if (filters.value.action) {
+      result = result.filter(log => log.action === filters.value.action)
+    }
+
+    if (filters.value.entityType) {
+      result = result.filter(
+        log => log.entity_type === filters.value.entityType,
+      )
+    }
+
+    if (filters.value.dateFrom) {
+      const fromDate = new Date(filters.value.dateFrom)
+      result = result.filter(log => new Date(log.created_at) >= fromDate)
+    }
+
+    if (filters.value.dateTo) {
+      const toDate = new Date(filters.value.dateTo)
+      toDate.setHours(23, 59, 59)
+      result = result.filter(log => new Date(log.created_at) <= toDate)
+    }
+
+    return result
+  })
+
+  const totalPages = computed(() =>
+    Math.ceil(filteredLogs.value.length / itemsPerPage),
+  )
+
+  const paginatedLogs = computed(() => {
+    const start = (currentPage.value - 1) * itemsPerPage
+    const end = start + itemsPerPage
+    return filteredLogs.value.slice(start, end)
+  })
+
+  function formatDateTime (dateString: string) {
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
 
-  if (filters.value.entityType) {
-    result = result.filter(
-      (log) => log.entity_type === filters.value.entityType
-    );
+  function formatAction (action: string) {
+    return action
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
   }
 
-  if (filters.value.dateFrom) {
-    const fromDate = new Date(filters.value.dateFrom);
-    result = result.filter((log) => new Date(log.created_at) >= fromDate);
+  function getActionColor (action: string) {
+    const colorMap: Record<string, string> = {
+      teacher_approved: 'success',
+      teacher_rejected: 'error',
+      grades_finalized: 'info',
+      grades_unlocked: 'warning',
+      grades_refinalized: 'primary',
+    }
+    return colorMap[action] || 'default'
   }
 
-  if (filters.value.dateTo) {
-    const toDate = new Date(filters.value.dateTo);
-    toDate.setHours(23, 59, 59);
-    result = result.filter((log) => new Date(log.created_at) <= toDate);
+  function viewDetails (log: any) {
+    selectedLog.value = log
+    detailsDialog.value = true
   }
 
-  return result;
-});
+  async function loadLogs () {
+    loading.value = true
 
-const totalPages = computed(() =>
-  Math.ceil(filteredLogs.value.length / itemsPerPage)
-);
-
-const paginatedLogs = computed(() => {
-  const start = (currentPage.value - 1) * itemsPerPage;
-  const end = start + itemsPerPage;
-  return filteredLogs.value.slice(start, end);
-});
-
-function formatDateTime(dateString: string) {
-  return new Date(dateString).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatAction(action: string) {
-  return action
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-}
-
-function getActionColor(action: string) {
-  const colorMap: Record<string, string> = {
-    teacher_approved: "success",
-    teacher_rejected: "error",
-    grades_finalized: "info",
-    grades_unlocked: "warning",
-    grades_refinalized: "primary",
-  };
-  return colorMap[action] || "default";
-}
-
-function viewDetails(log: any) {
-  selectedLog.value = log;
-  detailsDialog.value = true;
-}
-
-async function loadLogs() {
-  loading.value = true;
-
-  try {
-    const { data, error } = await supabase
-      .from("audit_logs")
-      .select(
-        `
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select(
+          `
         *,
         user:profiles!audit_logs_user_id_fkey(email, role)
-      `
-      )
-      .order("created_at", { ascending: false })
-      .limit(500);
+      `,
+        )
+        .order('created_at', { ascending: false })
+        .limit(500)
 
-    if (error) throw error;
+      if (error) throw error
 
-    logs.value = (data || []).map((log: any) => ({
-      ...log,
-      user_email: log.user?.email || "Unknown",
-      user_role: log.user?.role || "",
-    }));
-  } catch (error: any) {
-    console.error("Error loading audit logs:", error);
-  } finally {
-    loading.value = false;
+      logs.value = (data || []).map((log: any) => ({
+        ...log,
+        user_email: log.user?.email || 'Unknown',
+        user_role: log.user?.role || '',
+      }))
+    } catch (error: any) {
+      console.error('Error loading audit logs:', error)
+    } finally {
+      loading.value = false
+    }
   }
-}
 
-onMounted(() => {
-  loadLogs();
-});
+  onMounted(() => {
+    loadLogs()
+  })
 </script>

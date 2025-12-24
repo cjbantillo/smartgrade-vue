@@ -82,9 +82,9 @@ meta:
                     <v-btn
                       class="mr-2"
                       color="success"
+                      :loading="approving === teacher.user_id"
                       prepend-icon="mdi-check"
                       size="small"
-                      :loading="approving === teacher.user_id"
                       @click="approveTeacher(teacher)"
                     >
                       Approve
@@ -168,10 +168,8 @@ meta:
         <v-card-text>
           <p class="mb-4">
             Are you sure you want to reject the account for
-            <strong
-              >{{ selectedTeacher?.first_name }}
-              {{ selectedTeacher?.last_name }}</strong
-            >?
+            <strong>{{ selectedTeacher?.first_name }}
+              {{ selectedTeacher?.last_name }}</strong>?
           </p>
           <v-alert color="warning" variant="tonal">
             This will prevent the teacher from accessing the system.
@@ -198,188 +196,188 @@ meta:
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
-import { supabase } from "@/services/supabase";
-import { useAuthStore } from "@/stores/auth";
+  import { computed, onMounted, ref } from 'vue'
+  import { supabase } from '@/services/supabase'
+  import { useAuthStore } from '@/stores/auth'
 
-const authStore = useAuthStore();
-const currentTab = ref("pending");
-const searchQuery = ref("");
-const pendingTeachers = ref<any[]>([]);
-const approvedTeachers = ref<any[]>([]);
-const approving = ref<string | null>(null);
-const rejecting = ref(false);
-const rejectDialog = ref(false);
-const selectedTeacher = ref<any>(null);
+  const authStore = useAuthStore()
+  const currentTab = ref('pending')
+  const searchQuery = ref('')
+  const pendingTeachers = ref<any[]>([])
+  const approvedTeachers = ref<any[]>([])
+  const approving = ref<string | null>(null)
+  const rejecting = ref(false)
+  const rejectDialog = ref(false)
+  const selectedTeacher = ref<any>(null)
 
-const snackbar = ref({
-  show: false,
-  message: "",
-  color: "success",
-});
+  const snackbar = ref({
+    show: false,
+    message: '',
+    color: 'success',
+  })
 
-const filteredApprovedTeachers = computed(() => {
-  if (!searchQuery.value) return approvedTeachers.value;
+  const filteredApprovedTeachers = computed(() => {
+    if (!searchQuery.value) return approvedTeachers.value
 
-  const query = searchQuery.value.toLowerCase();
-  return approvedTeachers.value.filter(
-    (teacher) =>
-      teacher.first_name.toLowerCase().includes(query) ||
-      teacher.last_name.toLowerCase().includes(query) ||
-      teacher.email.toLowerCase().includes(query) ||
-      teacher.teacher?.department?.toLowerCase().includes(query)
-  );
-});
+    const query = searchQuery.value.toLowerCase()
+    return approvedTeachers.value.filter(
+      teacher =>
+        teacher.first_name.toLowerCase().includes(query)
+        || teacher.last_name.toLowerCase().includes(query)
+        || teacher.email.toLowerCase().includes(query)
+        || teacher.teacher?.department?.toLowerCase().includes(query),
+    )
+  })
 
-function formatDate(dateString: string | null) {
-  if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
+  function formatDate (dateString: string | null) {
+    if (!dateString) return 'N/A'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+  }
 
-async function loadTeachers() {
-  // Fetch pending teachers
-  const { data: pending } = await supabase
-    .from("profiles")
-    .select(
-      `
+  async function loadTeachers () {
+    // Fetch pending teachers
+    const { data: pending } = await supabase
+      .from('profiles')
+      .select(
+        `
       *,
       teacher:teachers(
         employee_number,
         department
       )
-    `
-    )
-    .eq("role", "teacher")
-    .eq("is_approved", false)
-    .order("created_at", { ascending: false });
+    `,
+      )
+      .eq('role', 'teacher')
+      .eq('is_approved', false)
+      .order('created_at', { ascending: false })
 
-  pendingTeachers.value = pending || [];
+    pendingTeachers.value = pending || []
 
-  // Fetch approved teachers
-  const { data: approved } = await supabase
-    .from("profiles")
-    .select(
-      `
+    // Fetch approved teachers
+    const { data: approved } = await supabase
+      .from('profiles')
+      .select(
+        `
       *,
       teacher:teachers(
         employee_number,
         department
       )
-    `
-    )
-    .eq("role", "teacher")
-    .eq("is_approved", true)
-    .order("approved_at", { ascending: false });
+    `,
+      )
+      .eq('role', 'teacher')
+      .eq('is_approved', true)
+      .order('approved_at', { ascending: false })
 
-  approvedTeachers.value = approved || [];
-}
-
-async function approveTeacher(teacher: any) {
-  approving.value = teacher.user_id;
-
-  try {
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        is_approved: true,
-        approved_by: authStore.user?.id,
-        approved_at: new Date().toISOString(),
-      })
-      .eq("user_id", teacher.user_id);
-
-    if (error) throw error;
-
-    // Log the approval
-    await supabase.from("audit_logs").insert({
-      user_id: authStore.user?.id,
-      action: "teacher_approved",
-      entity_type: "profile",
-      entity_id: teacher.user_id,
-      new_values: {
-        approved: true,
-        teacher_name: `${teacher.first_name} ${teacher.last_name}`,
-        teacher_email: teacher.email,
-      },
-    });
-
-    snackbar.value = {
-      show: true,
-      message: `${teacher.first_name} ${teacher.last_name} has been approved`,
-      color: "success",
-    };
-
-    await loadTeachers();
-  } catch (error: any) {
-    snackbar.value = {
-      show: true,
-      message: `Error: ${error.message}`,
-      color: "error",
-    };
-  } finally {
-    approving.value = null;
+    approvedTeachers.value = approved || []
   }
-}
 
-function openRejectDialog(teacher: any) {
-  selectedTeacher.value = teacher;
-  rejectDialog.value = true;
-}
+  async function approveTeacher (teacher: any) {
+    approving.value = teacher.user_id
 
-async function rejectTeacher() {
-  if (!selectedTeacher.value) return;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          is_approved: true,
+          approved_by: authStore.user?.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('user_id', teacher.user_id)
 
-  rejecting.value = true;
+      if (error) throw error
 
-  try {
-    // Set account to inactive (soft reject)
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        is_active: false,
-        is_approved: false,
+      // Log the approval
+      await supabase.from('audit_logs').insert({
+        user_id: authStore.user?.id,
+        action: 'teacher_approved',
+        entity_type: 'profile',
+        entity_id: teacher.user_id,
+        new_values: {
+          approved: true,
+          teacher_name: `${teacher.first_name} ${teacher.last_name}`,
+          teacher_email: teacher.email,
+        },
       })
-      .eq("user_id", selectedTeacher.value.user_id);
 
-    if (error) throw error;
+      snackbar.value = {
+        show: true,
+        message: `${teacher.first_name} ${teacher.last_name} has been approved`,
+        color: 'success',
+      }
 
-    // Log the rejection
-    await supabase.from("audit_logs").insert({
-      user_id: authStore.user?.id,
-      action: "teacher_rejected",
-      entity_type: "profile",
-      entity_id: selectedTeacher.value.user_id,
-      new_values: {
-        rejected: true,
-        teacher_name: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}`,
-        teacher_email: selectedTeacher.value.email,
-      },
-    });
-
-    snackbar.value = {
-      show: true,
-      message: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}'s account has been rejected`,
-      color: "warning",
-    };
-
-    rejectDialog.value = false;
-    selectedTeacher.value = null;
-    await loadTeachers();
-  } catch (error: any) {
-    snackbar.value = {
-      show: true,
-      message: `Error: ${error.message}`,
-      color: "error",
-    };
-  } finally {
-    rejecting.value = false;
+      await loadTeachers()
+    } catch (error: any) {
+      snackbar.value = {
+        show: true,
+        message: `Error: ${error.message}`,
+        color: 'error',
+      }
+    } finally {
+      approving.value = null
+    }
   }
-}
 
-onMounted(() => {
-  loadTeachers();
-});
+  function openRejectDialog (teacher: any) {
+    selectedTeacher.value = teacher
+    rejectDialog.value = true
+  }
+
+  async function rejectTeacher () {
+    if (!selectedTeacher.value) return
+
+    rejecting.value = true
+
+    try {
+      // Set account to inactive (soft reject)
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          is_active: false,
+          is_approved: false,
+        })
+        .eq('user_id', selectedTeacher.value.user_id)
+
+      if (error) throw error
+
+      // Log the rejection
+      await supabase.from('audit_logs').insert({
+        user_id: authStore.user?.id,
+        action: 'teacher_rejected',
+        entity_type: 'profile',
+        entity_id: selectedTeacher.value.user_id,
+        new_values: {
+          rejected: true,
+          teacher_name: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}`,
+          teacher_email: selectedTeacher.value.email,
+        },
+      })
+
+      snackbar.value = {
+        show: true,
+        message: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}'s account has been rejected`,
+        color: 'warning',
+      }
+
+      rejectDialog.value = false
+      selectedTeacher.value = null
+      await loadTeachers()
+    } catch (error: any) {
+      snackbar.value = {
+        show: true,
+        message: `Error: ${error.message}`,
+        color: 'error',
+      }
+    } finally {
+      rejecting.value = false
+    }
+  }
+
+  onMounted(() => {
+    loadTeachers()
+  })
 </script>

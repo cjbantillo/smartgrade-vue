@@ -59,7 +59,7 @@ export function useTeacher() {
     error.value = null;
 
     try {
-      if (!authStore.profile?.id) {
+      if (!authStore.profile?.user_id) {
         throw new Error("Teacher profile not found");
       }
 
@@ -84,10 +84,12 @@ export function useTeacher() {
           )
         `
         )
-        .eq("teacher_id", authStore.profile.id)
+        .eq("teacher_id", authStore.profile.user_id)
         .order("created_at", { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        throw fetchError;
+      }
 
       // Get student counts for each class
       const classIds = data?.map((c) => c.id) || [];
@@ -111,15 +113,15 @@ export function useTeacher() {
         grading_period: c.grading_period,
         created_at: c.created_at,
         updated_at: c.updated_at,
-        subject_name: c.subjects?.name,
-        subject_code: c.subjects?.code,
-        school_year: c.school_years?.year,
+        subject_name: (c.subjects as any)?.name,
+        subject_code: (c.subjects as any)?.code,
+        school_year: (c.school_years as any)?.year,
         student_count: studentCounts[c.id] || 0,
       }));
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to fetch classes";
-      console.error("Error fetching teacher classes:", err);
+        error_ instanceof Error ? error_.message : "Failed to fetch classes";
+      console.error("Error fetching teacher classes:", error_);
       return [];
     } finally {
       loading.value = false;
@@ -139,7 +141,7 @@ export function useTeacher() {
     error.value = null;
 
     try {
-      if (!authStore.profile?.id) {
+      if (!authStore.profile?.user_id) {
         throw new Error("Teacher profile not found");
       }
 
@@ -147,7 +149,7 @@ export function useTeacher() {
       const { data: existing } = await supabase
         .from("class_assignments")
         .select("id")
-        .eq("teacher_id", authStore.profile.id)
+        .eq("teacher_id", authStore.profile.user_id)
         .eq("subject_id", data.subject_id)
         .eq("section", data.section)
         .eq("school_year_id", data.school_year_id)
@@ -163,7 +165,7 @@ export function useTeacher() {
       const { data: newClass, error: insertError } = await supabase
         .from("class_assignments")
         .insert({
-          teacher_id: authStore.profile.id,
+          teacher_id: authStore.profile.user_id,
           subject_id: data.subject_id,
           section: data.section,
           school_year_id: data.school_year_id,
@@ -190,7 +192,9 @@ export function useTeacher() {
         )
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw insertError;
+      }
 
       // Log audit trail
       await supabase.from("audit_logs").insert({
@@ -199,7 +203,7 @@ export function useTeacher() {
         entity_type: "class_assignment",
         entity_id: newClass.id,
         new_values: {
-          subject: newClass.subjects?.name,
+          subject: (newClass.subjects as any)?.name,
           section: newClass.section,
           grading_period: newClass.grading_period,
         },
@@ -214,15 +218,15 @@ export function useTeacher() {
         grading_period: newClass.grading_period,
         created_at: newClass.created_at,
         updated_at: newClass.updated_at,
-        subject_name: newClass.subjects?.name,
-        subject_code: newClass.subjects?.code,
-        school_year: newClass.school_years?.year,
+        subject_name: (newClass.subjects as any)?.name,
+        subject_code: (newClass.subjects as any)?.code,
+        school_year: (newClass.school_years as any)?.year,
         student_count: 0,
       };
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to create class";
-      console.error("Error creating class:", err);
+        error_ instanceof Error ? error_.message : "Failed to create class";
+      console.error("Error creating class:", error_);
       return null;
     } finally {
       loading.value = false;
@@ -260,25 +264,29 @@ export function useTeacher() {
         .eq("class_id", classId)
         .order("enrolled_at", { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        throw fetchError;
+      }
 
       return (data || []).map((e) => ({
         id: e.id,
         class_id: e.class_id,
         student_id: e.student_id,
         enrolled_at: e.enrolled_at,
-        lrn: e.students?.lrn || "",
-        first_name: e.students?.first_name || "",
-        middle_name: e.students?.middle_name,
-        last_name: e.students?.last_name || "",
-        track: e.students?.track,
+        lrn: (e.students as any)?.lrn || "",
+        first_name: (e.students as any)?.first_name || "",
+        middle_name: (e.students as any)?.middle_name,
+        last_name: (e.students as any)?.last_name || "",
+        track: (e.students as any)?.track,
         strand: e.students?.strand,
         grade_level: e.students?.grade_level || 0,
       }));
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to fetch class students";
-      console.error("Error fetching class students:", err);
+        error_ instanceof Error
+          ? error_.message
+          : "Failed to fetch class students";
+      console.error("Error fetching class students:", error_);
       return [];
     } finally {
       loading.value = false;
@@ -323,7 +331,9 @@ export function useTeacher() {
         )
         .limit(20);
 
-      if (searchError) throw searchError;
+      if (searchError) {
+        throw searchError;
+      }
 
       return (data || []).map((s) => ({
         id: s.id,
@@ -335,12 +345,12 @@ export function useTeacher() {
         track: s.track,
         strand: s.strand,
         grade_level: s.grade_level,
-        email: s.profiles?.email,
+        email: (s.profiles as any)?.email,
       }));
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to search students";
-      console.error("Error searching students:", err);
+        error_ instanceof Error ? error_.message : "Failed to search students";
+      console.error("Error searching students:", error_);
       return [];
     } finally {
       loading.value = false;
@@ -377,7 +387,9 @@ export function useTeacher() {
           student_id: studentId,
         });
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        throw insertError;
+      }
 
       // Get student details for audit log
       const { data: student } = await supabase
@@ -399,10 +411,10 @@ export function useTeacher() {
       });
 
       return true;
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to enroll student";
-      console.error("Error enrolling student:", err);
+        error_ instanceof Error ? error_.message : "Failed to enroll student";
+      console.error("Error enrolling student:", error_);
       return false;
     } finally {
       loading.value = false;
@@ -438,7 +450,9 @@ export function useTeacher() {
         .delete()
         .eq("id", enrollmentId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        throw deleteError;
+      }
 
       // Log audit trail
       await supabase.from("audit_logs").insert({
@@ -447,16 +461,18 @@ export function useTeacher() {
         entity_type: "class_enrollment",
         entity_id: enrollment?.class_id,
         old_values: {
-          student_lrn: enrollment?.students?.lrn,
-          student_name: `${enrollment?.students?.first_name} ${enrollment?.students?.last_name}`,
+          student_lrn: (enrollment?.students as any)?.lrn,
+          student_name: `${(enrollment?.students as any)?.first_name} ${
+            (enrollment?.students as any)?.last_name
+          }`,
         },
       });
 
       return true;
-    } catch (err) {
+    } catch (error_) {
       error.value =
-        err instanceof Error ? err.message : "Failed to unenroll student";
-      console.error("Error unenrolling student:", err);
+        error_ instanceof Error ? error_.message : "Failed to unenroll student";
+      console.error("Error unenrolling student:", error_);
       return false;
     } finally {
       loading.value = false;

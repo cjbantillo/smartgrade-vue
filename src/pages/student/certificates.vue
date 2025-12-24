@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid class="pa-6">
+  <v-container class="pa-6" fluid>
     <!-- Header -->
     <v-row>
       <v-col cols="12">
@@ -12,12 +12,12 @@
 
     <!-- Loading State -->
     <v-row v-if="loading">
-      <v-col cols="12" class="text-center py-12">
+      <v-col class="text-center py-12" cols="12">
         <v-progress-circular
-          indeterminate
           color="primary"
+          indeterminate
           size="64"
-        ></v-progress-circular>
+        />
         <p class="text-h6 mt-4">Loading your certificates...</p>
       </v-col>
     </v-row>
@@ -43,43 +43,31 @@
         <v-card class="mt-6" color="blue-lighten-5">
           <v-card-text class="pa-6">
             <h3 class="text-h6 font-weight-bold mb-3">
-              <v-icon start color="info">mdi-certificate</v-icon>
+              <v-icon color="info" start>mdi-certificate</v-icon>
               Types of Certificates
             </h3>
             <v-list>
               <v-list-item>
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon color="purple">mdi-medal</v-icon>
                 </template>
-                <v-list-item-title class="font-weight-bold"
-                  >Academic Excellence (Honors)</v-list-item-title
-                >
-                <v-list-item-subtitle
-                  >For students with GPA of 90 or above</v-list-item-subtitle
-                >
+                <v-list-item-title class="font-weight-bold">Academic Excellence (Honors)</v-list-item-title>
+                <v-list-item-subtitle>For students with GPA of 90 or above</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon color="blue">mdi-shield-check</v-icon>
                 </template>
-                <v-list-item-title class="font-weight-bold"
-                  >Good Moral Character</v-list-item-title
-                >
-                <v-list-item-subtitle
-                  >Recognition of exemplary conduct and
-                  behavior</v-list-item-subtitle
-                >
+                <v-list-item-title class="font-weight-bold">Good Moral Character</v-list-item-title>
+                <v-list-item-subtitle>Recognition of exemplary conduct and
+                  behavior</v-list-item-subtitle>
               </v-list-item>
               <v-list-item>
-                <template v-slot:prepend>
+                <template #prepend>
                   <v-icon color="green">mdi-school</v-icon>
                 </template>
-                <v-list-item-title class="font-weight-bold"
-                  >Certificate of Completion</v-list-item-title
-                >
-                <v-list-item-subtitle
-                  >Completion of grade level requirements</v-list-item-subtitle
-                >
+                <v-list-item-title class="font-weight-bold">Certificate of Completion</v-list-item-title>
+                <v-list-item-subtitle>Completion of grade level requirements</v-list-item-subtitle>
               </v-list-item>
             </v-list>
           </v-card-text>
@@ -94,8 +82,8 @@
           v-for="cert in certificates"
           :key="cert.id"
           cols="12"
-          md="6"
           lg="4"
+          md="6"
         >
           <v-card hover @click="viewCertificate(cert)">
             <v-card-title
@@ -117,35 +105,35 @@
                 Verification Code
               </p>
               <v-chip
-                color="primary"
-                variant="tonal"
-                size="small"
                 class="mb-4"
+                color="primary"
+                size="small"
+                variant="tonal"
                 @click.stop="copyVerificationCode(cert.qr_code_url)"
               >
-                <v-icon start size="small">mdi-qrcode</v-icon>
+                <v-icon size="small" start>mdi-qrcode</v-icon>
                 {{ cert.qr_code_url }}
                 <v-icon end size="small">mdi-content-copy</v-icon>
               </v-chip>
 
-              <v-divider class="my-4"></v-divider>
+              <v-divider class="my-4" />
 
               <div class="d-flex gap-2">
                 <v-btn
-                  color="primary"
-                  size="small"
-                  prepend-icon="mdi-eye"
-                  @click.stop="viewCertificate(cert)"
                   block
+                  color="primary"
+                  prepend-icon="mdi-eye"
+                  size="small"
+                  @click.stop="viewCertificate(cert)"
                 >
                   View
                 </v-btn>
                 <v-btn
-                  color="secondary"
-                  size="small"
-                  prepend-icon="mdi-shield-check"
-                  @click.stop="verifyCertificate(cert.qr_code_url)"
                   block
+                  color="secondary"
+                  prepend-icon="mdi-shield-check"
+                  size="small"
+                  @click.stop="verifyCertificate(cert.qr_code_url)"
                 >
                   Verify
                 </v-btn>
@@ -161,7 +149,7 @@
           <v-card color="blue-lighten-5">
             <v-card-text class="pa-6">
               <h3 class="text-h6 font-weight-bold mb-3">
-                <v-icon start color="info">mdi-information</v-icon>
+                <v-icon color="info" start>mdi-information</v-icon>
                 About Your Certificates
               </h3>
               <p class="text-body-2 mb-2">
@@ -198,96 +186,108 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useStudent } from "@/composables/useStudent";
+  import { onMounted, ref } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useStudent } from '@/composables/useStudent'
 
-const router = useRouter();
-const { loading, error, fetchStudentCertificates, getStudentId } = useStudent();
+  const router = useRouter()
+  const { loading, error, fetchStudentCertificates, getStudentId } = useStudent()
 
-// Component state
-const certificates = ref<any[]>([]);
-const studentId = ref<string | null>(null);
-const showCopySuccess = ref(false);
+  // Component state
+  const certificates = ref<any[]>([])
+  const studentId = ref<string | null>(null)
+  const showCopySuccess = ref(false)
 
-// Methods
-function getCertificateName(type: string): string {
-  switch (type) {
-    case "honors":
-      return "Academic Excellence";
-    case "good_moral":
-      return "Good Moral Character";
-    case "completion":
-      return "Certificate of Completion";
-    default:
-      return "Certificate";
+  // Methods
+  function getCertificateName (type: string): string {
+    switch (type) {
+      case 'honors': {
+        return 'Academic Excellence'
+      }
+      case 'good_moral': {
+        return 'Good Moral Character'
+      }
+      case 'completion': {
+        return 'Certificate of Completion'
+      }
+      default: {
+        return 'Certificate'
+      }
+    }
   }
-}
 
-function getCertificateIcon(type: string): string {
-  switch (type) {
-    case "honors":
-      return "mdi-medal";
-    case "good_moral":
-      return "mdi-shield-check";
-    case "completion":
-      return "mdi-school";
-    default:
-      return "mdi-certificate";
+  function getCertificateIcon (type: string): string {
+    switch (type) {
+      case 'honors': {
+        return 'mdi-medal'
+      }
+      case 'good_moral': {
+        return 'mdi-shield-check'
+      }
+      case 'completion': {
+        return 'mdi-school'
+      }
+      default: {
+        return 'mdi-certificate'
+      }
+    }
   }
-}
 
-function getCertificateHeaderClass(type: string): string {
-  switch (type) {
-    case "honors":
-      return "bg-purple text-white";
-    case "good_moral":
-      return "bg-blue text-white";
-    case "completion":
-      return "bg-green text-white";
-    default:
-      return "bg-grey text-white";
+  function getCertificateHeaderClass (type: string): string {
+    switch (type) {
+      case 'honors': {
+        return 'bg-purple text-white'
+      }
+      case 'good_moral': {
+        return 'bg-blue text-white'
+      }
+      case 'completion': {
+        return 'bg-green text-white'
+      }
+      default: {
+        return 'bg-grey text-white'
+      }
+    }
   }
-}
 
-function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-async function copyVerificationCode(code: string) {
-  try {
-    await navigator.clipboard.writeText(code);
-    showCopySuccess.value = true;
-  } catch (err) {
-    console.error("Failed to copy:", err);
+  function formatDate (date: string): string {
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
   }
-}
 
-function viewCertificate(cert: any) {
-  if (studentId.value) {
-    router.push(
-      `/teacher/certificates/${studentId.value}/${cert.school_year_id}`
-    );
+  async function copyVerificationCode (code: string) {
+    try {
+      await navigator.clipboard.writeText(code)
+      showCopySuccess.value = true
+    } catch (error_) {
+      console.error('Failed to copy:', error_)
+    }
   }
-}
 
-function verifyCertificate(code: string) {
-  router.push(`/verify?code=${code}`);
-}
+  function viewCertificate (cert: any) {
+    if (studentId.value) {
+      router.push(
+        `/teacher/certificates/${studentId.value}/${cert.school_year_id}`,
+      )
+    }
+  }
 
-async function loadCertificates() {
-  studentId.value = await getStudentId();
-  const certs = await fetchStudentCertificates();
-  certificates.value = certs;
-}
+  function verifyCertificate (code: string) {
+    router.push(`/verify?code=${code}`)
+  }
 
-onMounted(() => {
-  loadCertificates();
-});
+  async function loadCertificates () {
+    studentId.value = await getStudentId()
+    const certs = await fetchStudentCertificates()
+    certificates.value = certs
+  }
+
+  onMounted(() => {
+    loadCertificates()
+  })
 </script>
 
 <route lang="yaml">

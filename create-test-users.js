@@ -5,37 +5,37 @@
  * Run this from browser console or Node.js
  */
 
-import { supabase } from "./src/services/supabase";
+import { supabase } from './src/services/supabase'
 
 const TEST_USERS = [
   {
-    email: "admin@deped.gov.ph",
-    password: "admin123",
-    role: "admin",
-    firstName: "Admin",
-    lastName: "User",
+    email: 'admin@deped.gov.ph',
+    password: 'admin123',
+    role: 'admin',
+    firstName: 'Admin',
+    lastName: 'User',
   },
   {
-    email: "teacher@deped.gov.ph",
-    password: "teacher123",
-    role: "teacher",
-    firstName: "Teacher",
-    lastName: "User",
+    email: 'teacher@deped.gov.ph',
+    password: 'teacher123',
+    role: 'teacher',
+    firstName: 'Teacher',
+    lastName: 'User',
   },
   {
-    email: "student@example.com",
-    password: "student123",
-    role: "student",
-    firstName: "Student",
-    lastName: "User",
+    email: 'student@example.com',
+    password: 'student123',
+    role: 'student',
+    firstName: 'Student',
+    lastName: 'User',
   },
-];
+]
 
-async function createTestUsers() {
-  console.log("Creating test users...");
+async function createTestUsers () {
+  console.log('Creating test users...')
 
   for (const user of TEST_USERS) {
-    console.log(`\nCreating ${user.role}: ${user.email}`);
+    console.log(`\nCreating ${user.role}: ${user.email}`)
 
     try {
       // Sign up the user
@@ -48,22 +48,22 @@ async function createTestUsers() {
             last_name: user.lastName,
           },
         },
-      });
+      })
 
       if (authError) {
-        console.error(`❌ Auth error for ${user.email}:`, authError.message);
-        continue;
+        console.error(`❌ Auth error for ${user.email}:`, authError.message)
+        continue
       }
 
       if (!authData.user) {
-        console.error(`❌ No user returned for ${user.email}`);
-        continue;
+        console.error(`❌ No user returned for ${user.email}`)
+        continue
       }
 
-      console.log(`✅ Created auth user: ${authData.user.id}`);
+      console.log(`✅ Created auth user: ${authData.user.id}`)
 
       // Create profile with role
-      const { error: profileError } = await supabase.from("profiles").upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         user_id: authData.user.id,
         email: user.email,
         first_name: user.firstName,
@@ -71,30 +71,30 @@ async function createTestUsers() {
         role: user.role,
         is_active: true,
         is_approved: true,
-      });
+      })
 
       if (profileError) {
         console.error(
           `❌ Profile error for ${user.email}:`,
-          profileError.message
-        );
+          profileError.message,
+        )
       } else {
-        console.log(`✅ Created profile with role: ${user.role}`);
+        console.log(`✅ Created profile with role: ${user.role}`)
       }
     } catch (error) {
-      console.error(`❌ Exception for ${user.email}:`, error);
+      console.error(`❌ Exception for ${user.email}:`, error)
     }
   }
 
-  console.log("\n✅ Test user creation complete!");
+  console.log('\n✅ Test user creation complete!')
 }
 
 // Export for use in browser or Node
-if (typeof window !== "undefined") {
-  // Browser environment
-  window.createTestUsers = createTestUsers;
-  console.log("Run: createTestUsers()");
-} else {
+if (typeof window === 'undefined') {
   // Node environment
-  createTestUsers().then(() => process.exit(0));
+  createTestUsers().then(() => process.exit(0))
+} else {
+  // Browser environment
+  window.createTestUsers = createTestUsers
+  console.log('Run: createTestUsers()')
 }
