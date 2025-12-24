@@ -26,6 +26,15 @@ meta:
           Approve teacher accounts for Ampayon National High School - SHS
         </p>
       </v-col>
+      <v-col cols="auto" class="d-flex align-center">
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-account-plus"
+          @click="openPreRegisterDialog"
+        >
+          Pre-Register Teacher
+        </v-btn>
+      </v-col>
     </v-row>
 
     <!-- Tabs for Pending/Approved -->
@@ -242,6 +251,14 @@ meta:
               {{ selectedTeacher?.last_name }}</strong
             >?
           </p>
+          <v-textarea
+            v-model="rejectReason"
+            label="Reason for Rejection *"
+            placeholder="Explain why this account is being rejected..."
+            variant="outlined"
+            rows="3"
+            class="mb-2"
+          />
           <v-alert color="warning" variant="tonal">
             This will prevent the teacher from accessing the system.
           </v-alert>
@@ -249,8 +266,118 @@ meta:
         <v-card-actions>
           <v-spacer />
           <v-btn @click="rejectDialog = false">Cancel</v-btn>
-          <v-btn color="error" :loading="rejecting" @click="rejectTeacher">
+          <v-btn
+            color="error"
+            :loading="rejecting"
+            :disabled="!rejectReason"
+            @click="confirmRejectTeacher"
+          >
             Reject Account
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Pre-Register Teacher Dialog -->
+    <v-dialog v-model="preRegisterDialog" max-width="700px">
+      <v-card>
+        <v-card-title class="text-h5"> Pre-Register Teacher </v-card-title>
+        <v-card-text>
+          <v-alert class="mb-4" color="info" variant="tonal">
+            Pre-register a teacher before they sign up. When they create an
+            account with this email, their profile will be auto-populated.
+          </v-alert>
+          <v-form ref="preRegisterForm">
+            <v-row>
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="preRegisterData.first_name"
+                  label="First Name *"
+                  variant="outlined"
+                  :rules="[(v) => !!v || 'First name is required']"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="preRegisterData.middle_name"
+                  label="Middle Name"
+                  variant="outlined"
+                />
+              </v-col>
+              <v-col cols="12" md="4">
+                <v-text-field
+                  v-model="preRegisterData.last_name"
+                  label="Last Name *"
+                  variant="outlined"
+                  :rules="[(v) => !!v || 'Last name is required']"
+                />
+              </v-col>
+            </v-row>
+
+            <v-text-field
+              v-model="preRegisterData.email"
+              label="Email *"
+              type="email"
+              variant="outlined"
+              placeholder="teacher@deped.gov.ph"
+              class="mb-3"
+              :rules="emailRules"
+              :error-messages="emailError"
+              @input="validateEmail"
+            />
+
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="preRegisterData.employee_number"
+                  label="Employee Number"
+                  variant="outlined"
+                  placeholder="EMP-12345"
+                />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="preRegisterData.department"
+                  label="Department"
+                  variant="outlined"
+                  placeholder="Senior High School"
+                />
+              </v-col>
+            </v-row>
+
+            <v-row>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="preRegisterData.specialization"
+                  label="Specialization"
+                  variant="outlined"
+                  placeholder="Mathematics, Science, etc."
+                />
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-text-field
+                  v-model="preRegisterData.contact_number"
+                  label="Contact Number"
+                  variant="outlined"
+                  placeholder="09XXXXXXXXX"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="preRegisterDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :loading="loading"
+            :disabled="!isPreRegisterFormValid"
+            @click="submitPreRegister"
+          >
+            Pre-Register
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -281,6 +408,8 @@ const {
   approveTeacher: approveTeacherApi,
   upsertTeacher,
   deactivateTeacher: deactivateTeacherApi,
+  rejectTeacher: rejectTeacherApi,
+  preRegisterTeacher: preRegisterTeacherApi,
 } = useAdmin();
 
 const currentTab = ref("pending");
@@ -291,10 +420,24 @@ const allTeachers = ref<any[]>([]);
 const approving = ref<string | null>(null);
 const rejecting = ref(false);
 const rejectDialog = ref(false);
+const rejectReason = ref("");
 const selectedTeacher = ref<any>(null);
 const editDialog = ref(false);
+const preRegisterDialog = ref(false);
+const emailError = ref("");
 const editingTeacher = ref<any>(null);
 const teacherForm = ref({
+  employee_number: "",
+  department: "",
+  specialization: "",
+  contact_number: "",
+});
+
+const preRegisterData = ref({
+  first_name: "",
+  last_name: "",
+  middle_name: "",
+  email: "",
   employee_number: "",
   department: "",
   specialization: "",
@@ -305,6 +448,24 @@ const snackbar = ref({
   show: false,
   message: "",
   color: "success",
+});
+
+// Email validation rules
+const emailRules = [
+  (v: string) => !!v || "Email is required",
+  (v: string) =>
+    /^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(v) ||
+    "Email must be a valid @deped.gov.ph address",
+];
+
+const isPreRegisterFormValid = computed(() => {
+  return (
+    preRegisterData.value.first_name &&
+    preRegisterData.value.last_name &&
+    preRegisterData.value.email &&
+    /^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/.test(preRegisterData.value.email) &&
+    !emailError.value
+  );
 });
 
 const filteredApprovedTeachers = computed(() => {
@@ -480,7 +641,91 @@ function getEmail(item: any) {
 
 function openRejectDialog(teacher: any) {
   selectedTeacher.value = teacher;
+  rejectReason.value = "";
   rejectDialog.value = true;
+}
+
+async function confirmRejectTeacher() {
+  if (!selectedTeacher.value || !rejectReason.value) return;
+  if (!authStore.profile?.user_id) {
+    showSnackbar("Admin user not found", "error");
+    return;
+  }
+
+  rejecting.value = true;
+
+  try {
+    const success = await rejectTeacherApi(
+      selectedTeacher.value.user_id,
+      rejectReason.value,
+      authStore.profile.user_id
+    );
+
+    if (success) {
+      showSnackbar("Teacher account rejected", "success");
+      rejectDialog.value = false;
+      selectedTeacher.value = null;
+      rejectReason.value = "";
+      await loadTeachers();
+    } else {
+      showSnackbar(error.value || "Failed to reject teacher", "error");
+    }
+  } catch (err) {
+    showSnackbar("An error occurred", "error");
+  } finally {
+    rejecting.value = false;
+  }
+}
+
+function openPreRegisterDialog() {
+  preRegisterData.value = {
+    first_name: "",
+    last_name: "",
+    middle_name: "",
+    email: "",
+    employee_number: "",
+    department: "",
+    specialization: "",
+    contact_number: "",
+  };
+  emailError.value = "";
+  preRegisterDialog.value = true;
+}
+
+function validateEmail() {
+  const depedEmailRegex = /^[a-zA-Z0-9._%+-]+@deped\.gov\.ph$/;
+  if (
+    preRegisterData.value.email &&
+    !depedEmailRegex.test(preRegisterData.value.email)
+  ) {
+    emailError.value = "Email must be a valid @deped.gov.ph address";
+  } else {
+    emailError.value = "";
+  }
+}
+
+async function submitPreRegister() {
+  if (!isPreRegisterFormValid.value) return;
+  if (!authStore.profile?.user_id) {
+    showSnackbar("Admin user not found", "error");
+    return;
+  }
+
+  const success = await preRegisterTeacherApi(
+    preRegisterData.value,
+    authStore.profile.user_id
+  );
+
+  if (success) {
+    showSnackbar(
+      "Teacher pre-registered successfully. They will be auto-approved when they sign up.",
+      "success"
+    );
+    preRegisterDialog.value = false;
+    await loadTeachers();
+  } else {
+    showSnackbar(error.value || "Failed to pre-register teacher", "error");
+  }
 }
 
 async function rejectTeacher() {

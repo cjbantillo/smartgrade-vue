@@ -21,6 +21,10 @@ declare module 'vue-router/auto-routes' {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
     '/admin/': RouteRecordInfo<'/admin/', '/admin', Record<never, never>, Record<never, never>>,
     '/admin/audit-logs': RouteRecordInfo<'/admin/audit-logs', '/admin/audit-logs', Record<never, never>, Record<never, never>>,
+    '/admin/classes': RouteRecordInfo<'/admin/classes', '/admin/classes', Record<never, never>, Record<never, never>>,
+    '/admin/school-years': RouteRecordInfo<'/admin/school-years', '/admin/school-years', Record<never, never>, Record<never, never>>,
+    '/admin/settings': RouteRecordInfo<'/admin/settings', '/admin/settings', Record<never, never>, Record<never, never>>,
+    '/admin/subjects': RouteRecordInfo<'/admin/subjects', '/admin/subjects', Record<never, never>, Record<never, never>>,
     '/admin/teachers': RouteRecordInfo<'/admin/teachers', '/admin/teachers', Record<never, never>, Record<never, never>>,
     '/admin/unlock-requests': RouteRecordInfo<'/admin/unlock-requests', '/admin/unlock-requests', Record<never, never>, Record<never, never>>,
     '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
@@ -29,13 +33,16 @@ declare module 'vue-router/auto-routes' {
     '/student/documents': RouteRecordInfo<'/student/documents', '/student/documents', Record<never, never>, Record<never, never>>,
     '/student/grades': RouteRecordInfo<'/student/grades', '/student/grades', Record<never, never>, Record<never, never>>,
     '/teacher/': RouteRecordInfo<'/teacher/', '/teacher', Record<never, never>, Record<never, never>>,
+    '/teacher/activity': RouteRecordInfo<'/teacher/activity', '/teacher/activity', Record<never, never>, Record<never, never>>,
     '/teacher/certificates/': RouteRecordInfo<'/teacher/certificates/', '/teacher/certificates', Record<never, never>, Record<never, never>>,
     '/teacher/certificates/[studentId]/[schoolYearId]': RouteRecordInfo<'/teacher/certificates/[studentId]/[schoolYearId]', '/teacher/certificates/:studentId/:schoolYearId', { studentId: ParamValue<true>, schoolYearId: ParamValue<true> }, { studentId: ParamValue<false>, schoolYearId: ParamValue<false> }>,
     '/teacher/classes': RouteRecordInfo<'/teacher/classes', '/teacher/classes', Record<never, never>, Record<never, never>, '/teacher/classes/[id]' | '/teacher/classes/[id]/grades'>,
     '/teacher/classes/[id]': RouteRecordInfo<'/teacher/classes/[id]', '/teacher/classes/:id', { id: ParamValue<true> }, { id: ParamValue<false> }, '/teacher/classes/[id]/grades'>,
     '/teacher/classes/[id]/grades': RouteRecordInfo<'/teacher/classes/[id]/grades', '/teacher/classes/:id/grades', { id: ParamValue<true> }, { id: ParamValue<false> }>,
+    '/teacher/documents/': RouteRecordInfo<'/teacher/documents/', '/teacher/documents', Record<never, never>, Record<never, never>>,
     '/teacher/documents/sf10/[studentId]': RouteRecordInfo<'/teacher/documents/sf10/[studentId]', '/teacher/documents/sf10/:studentId', { studentId: ParamValue<true> }, { studentId: ParamValue<false> }>,
     '/teacher/documents/sf9/[studentId]/[schoolYearId]': RouteRecordInfo<'/teacher/documents/sf9/[studentId]/[schoolYearId]', '/teacher/documents/sf9/:studentId/:schoolYearId', { studentId: ParamValue<true>, schoolYearId: ParamValue<true> }, { studentId: ParamValue<false>, schoolYearId: ParamValue<false> }>,
+    '/teacher/grades': RouteRecordInfo<'/teacher/grades', '/teacher/grades', Record<never, never>, Record<never, never>>,
     '/test-supabase': RouteRecordInfo<'/test-supabase', '/test-supabase', Record<never, never>, Record<never, never>>,
     '/verify': RouteRecordInfo<'/verify', '/verify', Record<never, never>, Record<never, never>, '/verify/[id]'>,
     '/verify/[id]': RouteRecordInfo<'/verify/[id]', '/verify/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
@@ -62,6 +69,22 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/admin/audit-logs.vue': {
       routes: '/admin/audit-logs'
+      views: never
+    }
+    'src/pages/admin/classes.vue': {
+      routes: '/admin/classes'
+      views: never
+    }
+    'src/pages/admin/school-years.vue': {
+      routes: '/admin/school-years'
+      views: never
+    }
+    'src/pages/admin/settings.vue': {
+      routes: '/admin/settings'
+      views: never
+    }
+    'src/pages/admin/subjects.vue': {
+      routes: '/admin/subjects'
       views: never
     }
     'src/pages/admin/teachers.vue': {
@@ -96,6 +119,10 @@ declare module 'vue-router/auto-routes' {
       routes: '/teacher/'
       views: never
     }
+    'src/pages/teacher/activity.vue': {
+      routes: '/teacher/activity'
+      views: never
+    }
     'src/pages/teacher/certificates/index.vue': {
       routes: '/teacher/certificates/'
       views: never
@@ -116,12 +143,20 @@ declare module 'vue-router/auto-routes' {
       routes: '/teacher/classes/[id]/grades'
       views: never
     }
+    'src/pages/teacher/documents/index.vue': {
+      routes: '/teacher/documents/'
+      views: never
+    }
     'src/pages/teacher/documents/sf10/[studentId].vue': {
       routes: '/teacher/documents/sf10/[studentId]'
       views: never
     }
     'src/pages/teacher/documents/sf9/[studentId]/[schoolYearId].vue': {
       routes: '/teacher/documents/sf9/[studentId]/[schoolYearId]'
+      views: never
+    }
+    'src/pages/teacher/grades.vue': {
+      routes: '/teacher/grades'
       views: never
     }
     'src/pages/test-supabase.vue': {

@@ -25,13 +25,7 @@ meta:
 
     <!-- Class Cards Grid -->
     <v-row v-if="!loading && classes.length > 0">
-      <v-col
-        v-for="cls in classes"
-        :key="cls.id"
-        cols="12"
-        lg="4"
-        md="6"
-      >
+      <v-col v-for="cls in classes" :key="cls.id" cols="12" lg="4" md="6">
         <v-card hover>
           <v-card-title class="bg-primary">
             <div class="d-flex align-center justify-space-between">
@@ -53,11 +47,15 @@ meta:
             </div>
             <div class="mb-2">
               <v-icon class="mr-1" size="small">mdi-account-group</v-icon>
-              <span class="text-grey-darken-1">{{ cls.student_count }} students</span>
+              <span class="text-grey-darken-1"
+                >{{ cls.student_count }} students</span
+              >
             </div>
             <div>
               <v-icon class="mr-1" size="small">mdi-book-open-variant</v-icon>
-              <span class="text-grey-darken-1">Quarter {{ cls.grading_period }}</span>
+              <span class="text-grey-darken-1"
+                >Quarter {{ cls.grading_period }}</span
+              >
             </div>
           </v-card-text>
 
@@ -116,7 +114,7 @@ meta:
           <v-form ref="createForm">
             <v-autocomplete
               v-model="newClass.subject_id"
-              item-title="name"
+              item-title="subject_name"
               item-value="id"
               :items="subjects"
               label="Subject *"
@@ -127,7 +125,7 @@ meta:
               <template #item="{ props, item }">
                 <v-list-item v-bind="props">
                   <template #title>
-                    {{ item.raw.code }} - {{ item.raw.name }}
+                    {{ item.raw.subject_code }} - {{ item.raw.subject_name }}
                   </template>
                   <template v-if="item.raw.track" #subtitle>
                     {{ item.raw.track }}
@@ -148,7 +146,7 @@ meta:
 
             <v-select
               v-model="newClass.school_year_id"
-              item-title="year"
+              item-title="year_code"
               item-value="id"
               :items="schoolYears"
               label="School Year *"
@@ -187,73 +185,73 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue'
-  import { useTeacher } from '@/composables/useTeacher'
+import { onMounted, ref } from "vue";
+import { useTeacher } from "@/composables/useTeacher";
 
-  const {
-    loading,
-    error,
-    fetchTeacherClasses,
-    createClass,
-    fetchSubjects,
-    fetchSchoolYears,
-  } = useTeacher()
+const {
+  loading,
+  error,
+  fetchTeacherClasses,
+  createClass,
+  fetchSubjects,
+  fetchSchoolYears,
+} = useTeacher();
 
-  const classes = ref<any[]>([])
-  const subjects = ref<any[]>([])
-  const schoolYears = ref<any[]>([])
-  const createDialog = ref(false)
-  const createForm = ref<any>(null)
+const classes = ref<any[]>([]);
+const subjects = ref<any[]>([]);
+const schoolYears = ref<any[]>([]);
+const createDialog = ref(false);
+const createForm = ref<any>(null);
 
-  const newClass = ref({
-    subject_id: '',
-    section: '',
-    school_year_id: '',
-    grading_period: null as number | null,
-  })
+const newClass = ref({
+  subject_id: "",
+  section: "",
+  school_year_id: "",
+  grading_period: null as number | null,
+});
 
-  async function loadData () {
-    classes.value = await fetchTeacherClasses()
-    subjects.value = await fetchSubjects()
-    schoolYears.value = await fetchSchoolYears()
+async function loadData() {
+  classes.value = await fetchTeacherClasses();
+  subjects.value = await fetchSubjects();
+  schoolYears.value = await fetchSchoolYears();
 
-    // Pre-select active school year if available
-    const activeYear = schoolYears.value.find(y => y.is_active)
-    if (activeYear) {
-      newClass.value.school_year_id = activeYear.id
-    }
+  // Pre-select active school year if available
+  const activeYear = schoolYears.value.find((y) => y.is_active);
+  if (activeYear) {
+    newClass.value.school_year_id = activeYear.id;
   }
+}
 
-  async function handleCreateClass () {
-    const { valid } = await createForm.value.validate()
-    if (!valid) return
+async function handleCreateClass() {
+  const { valid } = await createForm.value.validate();
+  if (!valid) return;
 
-    const result = await createClass({
-      subject_id: newClass.value.subject_id,
-      section: newClass.value.section,
-      school_year_id: newClass.value.school_year_id,
-      grading_period: newClass.value.grading_period!,
-    })
+  const result = await createClass({
+    subject_id: newClass.value.subject_id,
+    section: newClass.value.section,
+    school_year_id: newClass.value.school_year_id,
+    grading_period: newClass.value.grading_period!,
+  });
 
-    if (result) {
-      classes.value.unshift(result)
-      closeCreateDialog()
-    }
+  if (result) {
+    classes.value.unshift(result);
+    closeCreateDialog();
   }
+}
 
-  function closeCreateDialog () {
-    createDialog.value = false
-    createForm.value?.reset()
-    newClass.value = {
-      subject_id: '',
-      section: '',
-      school_year_id: schoolYears.value.find(y => y.is_active)?.id || '',
-      grading_period: null,
-    }
-    error.value = null
-  }
+function closeCreateDialog() {
+  createDialog.value = false;
+  createForm.value?.reset();
+  newClass.value = {
+    subject_id: "",
+    section: "",
+    school_year_id: schoolYears.value.find((y) => y.is_active)?.id || "",
+    grading_period: null,
+  };
+  error.value = null;
+}
 
-  onMounted(() => {
-    loadData()
-  })
+onMounted(() => {
+  loadData();
+});
 </script>

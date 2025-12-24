@@ -64,24 +64,21 @@ export function useTeacher() {
       }
 
       const { data, error: fetchError } = await supabase
-        .from("class_assignments")
+        .from("classes")
         .select(
           `
           id,
-          teacher_id,
-          subject_id,
-          section,
+          section_name,
+          grade_level,
+          track,
+          strand,
+          room,
+          capacity,
+          semester,
           school_year_id,
-          grading_period,
+          teacher_id,
           created_at,
-          updated_at,
-          subjects:subject_id (
-            name,
-            code
-          ),
-          school_years:school_year_id (
-            year
-          )
+          updated_at
         `
         )
         .eq("teacher_id", authStore.profile.user_id)
@@ -93,29 +90,35 @@ export function useTeacher() {
 
       // Get student counts for each class
       const classIds = data?.map((c) => c.id) || [];
-      const { data: enrollments } = await supabase
-        .from("class_enrollments")
-        .select("class_id")
-        .in("class_id", classIds);
+      let studentCounts: Record<string, number> = {};
 
-      const studentCounts =
-        enrollments?.reduce((acc, e) => {
-          acc[e.class_id] = (acc[e.class_id] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>) || {};
+      if (classIds.length > 0) {
+        const { data: enrollments } = await supabase
+          .from("student_sections")
+          .select("class_id")
+          .in("class_id", classIds)
+          .eq("is_active", true);
+
+        studentCounts =
+          enrollments?.reduce((acc, e) => {
+            acc[e.class_id] = (acc[e.class_id] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>) || {};
+      }
 
       return (data || []).map((c) => ({
         id: c.id,
-        teacher_id: c.teacher_id,
-        subject_id: c.subject_id,
-        section: c.section,
+        section_name: c.section_name,
+        grade_level: c.grade_level,
+        track: c.track,
+        strand: c.strand,
+        room: c.room,
+        capacity: c.capacity,
+        semester: c.semester,
         school_year_id: c.school_year_id,
-        grading_period: c.grading_period,
+        teacher_id: c.teacher_id,
         created_at: c.created_at,
         updated_at: c.updated_at,
-        subject_name: (c.subjects as any)?.name,
-        subject_code: (c.subjects as any)?.code,
-        school_year: (c.school_years as any)?.year,
         student_count: studentCounts[c.id] || 0,
       }));
     } catch (error_) {
@@ -145,31 +148,41 @@ export function useTeacher() {
         throw new Error("Teacher profile not found");
       }
 
+      // Get teacher record
+      const { data: teacherData } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("user_id", authStore.profile.user_id)
+        .single();
+
+      if (!teacherData) {
+        throw new Error("Teacher record not found");
+      }
+
       // Check for duplicate class
       const { data: existing } = await supabase
-        .from("class_assignments")
+        .from("teacher_classes")
         .select("id")
-        .eq("teacher_id", authStore.profile.user_id)
+        .eq("teacher_id", teacherData.id)
         .eq("subject_id", data.subject_id)
         .eq("section", data.section)
         .eq("school_year_id", data.school_year_id)
-        .eq("grading_period", data.grading_period)
         .single();
 
       if (existing) {
         throw new Error(
-          "You already have a class with this subject, section, and grading period"
+          "You already have a class with this subject and section"
         );
       }
 
       const { data: newClass, error: insertError } = await supabase
-        .from("class_assignments")
+        .from("teacher_classes")
         .insert({
-          teacher_id: authStore.profile.user_id,
+          teacher_id: teacherData.id,
           subject_id: data.subject_id,
           section: data.section,
           school_year_id: data.school_year_id,
-          grading_period: data.grading_period,
+          created_by: authStore.profile.user_id,
         })
         .select(
           `
@@ -178,15 +191,14 @@ export function useTeacher() {
           subject_id,
           section,
           school_year_id,
-          grading_period,
           created_at,
           updated_at,
           subjects:subject_id (
-            name,
-            code
+            subject_name,
+            subject_code
           ),
           school_years:school_year_id (
-            year
+            year_code
           )
         `
         )
@@ -200,12 +212,17 @@ export function useTeacher() {
       await supabase.from("audit_logs").insert({
         user_id: authStore.user?.id,
         action: "class_created",
-        entity_type: "class_assignment",
+        entity_type: "teacher_class",
         entity_id: newClass.id,
+        metadata: {
+          description: `Created class: ${
+            (newClass.subjects as any)?.subject_name
+          } - ${newClass.section}`,
+        },
         new_values: {
-          subject: (newClass.subjects as any)?.name,
+          subject: (newClass.subjects as any)?.subject_name,
           section: newClass.section,
-          grading_period: newClass.grading_period,
+          school_year: (newClass.school_years as any)?.year_code,
         },
       });
 
@@ -215,12 +232,12 @@ export function useTeacher() {
         subject_id: newClass.subject_id,
         section: newClass.section,
         school_year_id: newClass.school_year_id,
-        grading_period: newClass.grading_period,
+        grading_period: data.grading_period,
         created_at: newClass.created_at,
         updated_at: newClass.updated_at,
-        subject_name: (newClass.subjects as any)?.name,
-        subject_code: (newClass.subjects as any)?.code,
-        school_year: (newClass.school_years as any)?.year,
+        subject_name: (newClass.subjects as any)?.subject_name,
+        subject_code: (newClass.subjects as any)?.subject_code,
+        school_year: (newClass.school_years as any)?.year_code,
         student_count: 0,
       };
     } catch (error_) {
@@ -485,8 +502,8 @@ export function useTeacher() {
   async function fetchSubjects() {
     const { data, error: fetchError } = await supabase
       .from("subjects")
-      .select("id, code, name, track, strand")
-      .order("name");
+      .select("id, subject_code, subject_name, track, strand")
+      .order("subject_name");
 
     if (fetchError) {
       console.error("Error fetching subjects:", fetchError);
@@ -502,8 +519,8 @@ export function useTeacher() {
   async function fetchSchoolYears() {
     const { data, error: fetchError } = await supabase
       .from("school_years")
-      .select("id, year, is_active")
-      .order("year", { ascending: false });
+      .select("id, year_code, is_active")
+      .order("year_code", { ascending: false });
 
     if (fetchError) {
       console.error("Error fetching school years:", fetchError);

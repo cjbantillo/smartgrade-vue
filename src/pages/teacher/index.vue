@@ -84,20 +84,28 @@ meta:
       </v-col>
 
       <v-col cols="12" lg="3" md="6">
-        <v-card class="text-center pa-4" disabled hover>
-          <v-icon class="mb-2" color="grey" size="64">
+        <v-card
+          class="text-center pa-4"
+          hover
+          @click="$router.push('/teacher/grades')"
+        >
+          <v-icon class="mb-2" color="warning" size="64">
             mdi-pencil-box-outline
           </v-icon>
           <v-card-title class="text-h6">Enter Grades</v-card-title>
           <v-card-text class="text-grey-darken-1">
-            Coming in Phase 7
+            Record and manage student grades
           </v-card-text>
         </v-card>
       </v-col>
 
       <v-col cols="12" lg="3" md="6">
-        <v-card class="text-center pa-4" disabled hover>
-          <v-icon class="mb-2" color="grey" size="64">
+        <v-card
+          class="text-center pa-4"
+          hover
+          @click="$router.push('/teacher/documents')"
+        >
+          <v-icon class="mb-2" color="success" size="64">
             mdi-certificate-outline
           </v-icon>
           <v-card-title class="text-h6">Generate Documents</v-card-title>
@@ -108,8 +116,12 @@ meta:
       </v-col>
 
       <v-col cols="12" lg="3" md="6">
-        <v-card class="text-center pa-4" disabled hover>
-          <v-icon class="mb-2" color="grey" size="64"> mdi-history </v-icon>
+        <v-card
+          class="text-center pa-4"
+          hover
+          @click="$router.push('/teacher/activity')"
+        >
+          <v-icon class="mb-2" color="info" size="64"> mdi-history </v-icon>
           <v-card-title class="text-h6">My Activity</v-card-title>
           <v-card-text class="text-grey-darken-1">
             View your audit logs
@@ -126,13 +138,7 @@ meta:
     </v-row>
 
     <v-row v-if="recentClasses.length > 0">
-      <v-col
-        v-for="cls in recentClasses"
-        :key="cls.id"
-        cols="12"
-        lg="4"
-        md="6"
-      >
+      <v-col v-for="cls in recentClasses" :key="cls.id" cols="12" lg="4" md="6">
         <v-card hover @click="$router.push(`/teacher/classes/${cls.id}`)">
           <v-card-title class="bg-primary">
             <div class="d-flex align-center justify-space-between">
@@ -169,30 +175,30 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue'
-  import { useTeacher } from '@/composables/useTeacher'
-  import { useAuthStore } from '@/stores/auth'
+import { onMounted, ref } from "vue";
+import { useTeacher } from "@/composables/useTeacher";
+import { useAuthStore } from "@/stores/auth";
 
-  const authStore = useAuthStore()
-  const { fetchTeacherClasses, loading } = useTeacher()
+const authStore = useAuthStore();
+const { fetchTeacherClasses, loading } = useTeacher();
 
-  const stats = ref({
-    totalClasses: 0,
-    totalStudents: 0,
-  })
+const stats = ref({
+  totalClasses: 0,
+  totalStudents: 0,
+});
 
-  const recentClasses = ref<any[]>([])
-  const activePeriod = ref('S.Y. 2024-2025')
+const recentClasses = ref<any[]>([]);
+const activePeriod = ref("S.Y. 2024-2025");
 
-  onMounted(async () => {
-    const classes = await fetchTeacherClasses()
-    stats.value.totalClasses = classes.length
-    stats.value.totalStudents = classes.reduce(
-      (sum, cls) => sum + (cls.student_count || 0),
-      0,
-    )
+onMounted(async () => {
+  const classes = await fetchTeacherClasses();
+  stats.value.totalClasses = classes.length;
+  stats.value.totalStudents = classes.reduce(
+    (sum, cls) => sum + (cls.student_count || 0),
+    0
+  );
 
-    // Show up to 3 most recent classes
-    recentClasses.value = classes.slice(0, 3)
-  })
+  // Show up to 3 most recent classes
+  recentClasses.value = classes.slice(0, 3);
+});
 </script>

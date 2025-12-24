@@ -1,19 +1,21 @@
 <!--
-  Audit Logs Page
-
-  Admin capability: View complete system activity history
-  Policy: Read-only access for accountability and compliance monitoring
+  Teacher Activity Page
+  
+  View teacher's own audit logs
 -->
 
 <route lang="yaml">
 meta:
-  layout: admin
-  requiresRole: admin
+  layout: teacher
+  requiresRole: teacher
 </route>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { supabase } from "@/services/supabase";
+import { useAuthStore } from "@/stores/auth";
+
+const authStore = useAuthStore();
 
 const logs = ref<any[]>([]);
 const loading = ref(false);
@@ -21,7 +23,6 @@ const error = ref<string | null>(null);
 
 const filters = ref({
   action: null as string | null,
-  entityType: null as string | null,
   dateFrom: "",
   dateTo: "",
   search: "",
@@ -31,26 +32,12 @@ const page = ref(1);
 const itemsPerPage = ref(25);
 
 const actionTypes = [
-  "teacher_approved",
-  "teacher_rejected",
-  "teacher_pre_registered",
-  "grades_finalized",
-  "grades_unlocked",
   "class_created",
-  "class_updated",
-  "class_deleted",
-  "teacher_assigned",
+  "student_enrolled",
+  "student_unenrolled",
+  "grades_finalized",
   "certificate_generated",
-  "certificate_revoked",
-];
-
-const entityTypes = [
-  "Teacher",
-  "TeacherInvite",
-  "GradeFinalization",
-  "Class",
-  "Certificate",
-  "Document",
+  "document_generated",
 ];
 
 const filteredLogs = computed(() => {
@@ -58,12 +45,6 @@ const filteredLogs = computed(() => {
 
   if (filters.value.action) {
     result = result.filter((log) => log.action === filters.value.action);
-  }
-
-  if (filters.value.entityType) {
-    result = result.filter(
-      (log) => log.entity_type === filters.value.entityType
-    );
   }
 
   if (filters.value.dateFrom) {
@@ -120,15 +101,15 @@ const formatAction = (action: string) => {
 };
 
 const getActionColor = (action: string) => {
-  if (action.includes("approved") || action.includes("created"))
-    return "success";
   if (
-    action.includes("rejected") ||
-    action.includes("deleted") ||
-    action.includes("revoked")
+    action.includes("created") ||
+    action.includes("enrolled") ||
+    action.includes("generated")
   )
+    return "success";
+  if (action.includes("deleted") || action.includes("unenrolled"))
     return "error";
-  if (action.includes("unlocked") || action.includes("updated"))
+  if (action.includes("finalized") || action.includes("updated"))
     return "warning";
   return "info";
 };
@@ -136,7 +117,6 @@ const getActionColor = (action: string) => {
 const clearFilters = () => {
   filters.value = {
     action: null,
-    entityType: null,
     dateFrom: "",
     dateTo: "",
     search: "",
@@ -148,18 +128,22 @@ const fetchLogs = async () => {
   error.value = null;
 
   try {
+    const user = await authStore.getUser();
+    if (!user) throw new Error("Not authenticated");
+
     const { data, error: fetchError } = await supabase
       .from("audit_logs")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(1000);
+      .limit(500);
 
     if (fetchError) throw fetchError;
 
     logs.value = data || [];
   } catch (err: any) {
     error.value = err.message;
-    console.error("Error fetching audit logs:", err);
+    console.error("Error fetching activity logs:", err);
   } finally {
     loading.value = false;
   }
@@ -178,14 +162,14 @@ onMounted(() => {
         <v-btn
           class="mb-4"
           prepend-icon="mdi-arrow-left"
-          to="/admin"
+          to="/teacher"
           variant="text"
         >
           Back to Dashboard
         </v-btn>
-        <h1 class="text-h4 font-weight-bold">System Audit Logs</h1>
+        <h1 class="text-h4 font-weight-bold">My Activity</h1>
         <p class="text-subtitle-1 text-medium-emphasis">
-          Complete activity history for accountability and compliance
+          View your activity history and actions
         </p>
       </v-col>
     </v-row>
@@ -210,16 +194,6 @@ onMounted(() => {
             />
           </v-col>
           <v-col cols="12" md="3">
-            <v-select
-              v-model="filters.entityType"
-              clearable
-              :items="entityTypes"
-              label="Entity Type"
-              variant="outlined"
-              density="compact"
-            />
-          </v-col>
-          <v-col cols="12" md="2">
             <v-text-field
               v-model="filters.dateFrom"
               label="From Date"
@@ -228,7 +202,7 @@ onMounted(() => {
               density="compact"
             />
           </v-col>
-          <v-col cols="12" md="2">
+          <v-col cols="12" md="3">
             <v-text-field
               v-model="filters.dateTo"
               label="To Date"
@@ -237,7 +211,7 @@ onMounted(() => {
               density="compact"
             />
           </v-col>
-          <v-col cols="12" md="2">
+          <v-col cols="12" md="3">
             <v-btn
               block
               color="secondary"
@@ -253,7 +227,7 @@ onMounted(() => {
             <v-text-field
               v-model="filters.search"
               clearable
-              label="Search logs..."
+              label="Search activity..."
               prepend-inner-icon="mdi-magnify"
               variant="outlined"
               density="compact"
@@ -263,7 +237,7 @@ onMounted(() => {
       </v-card-text>
     </v-card>
 
-    <!-- Logs Table -->
+    <!-- Activity Table -->
     <v-card :loading="loading">
       <v-card-text>
         <v-data-table
@@ -305,12 +279,10 @@ onMounted(() => {
 
           <template #no-data>
             <div class="text-center py-8">
-              <v-icon size="64" color="grey-lighten-1"
-                >mdi-file-document-outline</v-icon
-              >
-              <p class="text-h6 mt-4">No audit logs found</p>
+              <v-icon size="64" color="grey-lighten-1">mdi-history</v-icon>
+              <p class="text-h6 mt-4">No activity found</p>
               <p class="text-body-2 text-medium-emphasis">
-                Logs will appear here as actions are performed
+                Your actions will appear here
               </p>
             </div>
           </template>

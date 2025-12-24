@@ -498,6 +498,146 @@ export function useSystemSettings() {
     }
   }
 
+  /**
+   * Fetch grading periods for a school year
+   */
+  async function fetchGradingPeriods(schoolYearId: string): Promise<any[]> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const { data, error: fetchError } = await supabase
+        .from("grading_periods")
+        .select("*")
+        .eq("school_year_id", schoolYearId)
+        .order("period_number", { ascending: true });
+
+      if (fetchError) {
+        error.value = "Failed to fetch grading periods";
+        console.error("[Grading Periods] Fetch error:", fetchError);
+        return [];
+      }
+
+      return data || [];
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = message;
+      console.error("[Grading Periods] Exception:", err);
+      return [];
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Create grading period
+   */
+  async function createGradingPeriod(period: any): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const { error: insertError } = await supabase
+        .from("grading_periods")
+        .insert(period);
+
+      if (insertError) {
+        error.value = "Failed to create grading period";
+        console.error("[Grading Periods] Create error:", insertError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = message;
+      console.error("[Grading Periods] Exception:", err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Update grading period
+   */
+  async function updateGradingPeriod(
+    id: string,
+    updates: any
+  ): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const { error: updateError } = await supabase
+        .from("grading_periods")
+        .update(updates)
+        .eq("id", id);
+
+      if (updateError) {
+        error.value = "Failed to update grading period";
+        console.error("[Grading Periods] Update error:", updateError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = message;
+      console.error("[Grading Periods] Exception:", err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Set active grading period (only one active per school year)
+   * Transactional: deactivate all, then activate one
+   */
+  async function setActiveGradingPeriod(
+    periodId: string,
+    schoolYearId: string
+  ): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      // Deactivate all periods for this school year
+      const { error: deactivateError } = await supabase
+        .from("grading_periods")
+        .update({ is_active: false })
+        .eq("school_year_id", schoolYearId);
+
+      if (deactivateError) {
+        error.value = "Failed to deactivate existing periods";
+        console.error("[Grading Periods] Deactivate error:", deactivateError);
+        return false;
+      }
+
+      // Activate target period
+      const { error: activateError } = await supabase
+        .from("grading_periods")
+        .update({ is_active: true })
+        .eq("id", periodId);
+
+      if (activateError) {
+        error.value = "Failed to activate grading period";
+        console.error("[Grading Periods] Activate error:", activateError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = message;
+      console.error("[Grading Periods] Exception:", err);
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  }
+
   return {
     loading,
     error,
@@ -512,6 +652,11 @@ export function useSystemSettings() {
     updateSchoolYear,
     setActiveSchoolYear,
     deleteSchoolYear,
+    // Grading Periods
+    fetchGradingPeriods,
+    createGradingPeriod,
+    updateGradingPeriod,
+    setActiveGradingPeriod,
     // Subjects
     fetchSubjects,
     createSubject,

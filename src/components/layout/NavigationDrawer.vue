@@ -16,15 +16,38 @@ layouts */
 
     <!-- Navigation Items -->
     <v-list density="comfortable" nav>
-      <v-list-item
-        v-for="item in items"
-        :key="item.value"
-        exact
-        :prepend-icon="item.icon"
-        :title="item.title"
-        :to="item.to"
-        :value="item.value"
-      />
+      <template v-for="item in items" :key="item.value">
+        <!-- Group with children -->
+        <v-list-group v-if="item.children" :value="item.value">
+          <template #activator="{ props }">
+            <v-list-item
+              v-bind="props"
+              :prepend-icon="item.icon"
+              :title="item.title"
+              :value="item.value"
+            />
+          </template>
+          <v-list-item
+            v-for="child in item.children"
+            :key="child.value"
+            exact
+            :prepend-icon="child.icon"
+            :title="child.title"
+            :to="child.to"
+            :value="child.value"
+          />
+        </v-list-group>
+
+        <!-- Single item without children -->
+        <v-list-item
+          v-else
+          exact
+          :prepend-icon="item.icon"
+          :title="item.title"
+          :to="item.to"
+          :value="item.value"
+        />
+      </template>
     </v-list>
 
     <template #append>
@@ -42,28 +65,29 @@ layouts */
 </template>
 
 <script lang="ts" setup>
-  export interface NavigationItem {
-    title: string
-    icon: string
-    to: string
-    value: string
-  }
+export interface NavigationItem {
+  title: string;
+  icon: string;
+  to?: string;
+  value: string;
+  children?: NavigationItem[];
+}
 
-  interface Props {
-    headerTitle: string
-    headerIcon: string
-    items: NavigationItem[]
-    permanent?: boolean
-    modelValue?: boolean
-  }
+interface Props {
+  headerTitle: string;
+  headerIcon: string;
+  items: NavigationItem[];
+  permanent?: boolean;
+  modelValue?: boolean;
+}
 
-  withDefaults(defineProps<Props>(), {
-    permanent: true,
-    modelValue: true,
-  })
+withDefaults(defineProps<Props>(), {
+  permanent: true,
+  modelValue: true,
+});
 
-  defineEmits<{
-    'update:model-value': [value: boolean]
-    'logout': []
-  }>()
+defineEmits<{
+  "update:model-value": [value: boolean];
+  logout: [];
+}>();
 </script>
