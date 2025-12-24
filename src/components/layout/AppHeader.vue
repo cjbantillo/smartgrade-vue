@@ -23,20 +23,20 @@ across all user roles */
 </template>
 
 <script lang="ts" setup>
-interface Props {
-  title: string;
-  icon?: string;
-  color?: string;
-  showMenuToggle?: boolean;
-}
+  interface Props {
+    title: string
+    icon?: string
+    color?: string
+    showMenuToggle?: boolean
+  }
 
-withDefaults(defineProps<Props>(), {
-  icon: "mdi-school",
-  color: "primary",
-  showMenuToggle: false,
-});
+  withDefaults(defineProps<Props>(), {
+    icon: 'mdi-school',
+    color: 'primary',
+    showMenuToggle: false,
+  })
 
-defineEmits<{
-  "toggle-drawer": [];
-}>();
+  defineEmits<{
+    'toggle-drawer': []
+  }>()
 </script>

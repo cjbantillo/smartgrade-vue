@@ -42,28 +42,28 @@ layouts */
 </template>
 
 <script lang="ts" setup>
-export interface NavigationItem {
-  title: string;
-  icon: string;
-  to: string;
-  value: string;
-}
+  export interface NavigationItem {
+    title: string
+    icon: string
+    to: string
+    value: string
+  }
 
-interface Props {
-  headerTitle: string;
-  headerIcon: string;
-  items: NavigationItem[];
-  permanent?: boolean;
-  modelValue?: boolean;
-}
+  interface Props {
+    headerTitle: string
+    headerIcon: string
+    items: NavigationItem[]
+    permanent?: boolean
+    modelValue?: boolean
+  }
 
-withDefaults(defineProps<Props>(), {
-  permanent: true,
-  modelValue: true,
-});
+  withDefaults(defineProps<Props>(), {
+    permanent: true,
+    modelValue: true,
+  })
 
-defineEmits<{
-  "update:model-value": [value: boolean];
-  logout: [];
-}>();
+  defineEmits<{
+    'update:model-value': [value: boolean]
+    'logout': []
+  }>()
 </script>

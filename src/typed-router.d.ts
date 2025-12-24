@@ -19,6 +19,11 @@ declare module 'vue-router/auto-routes' {
    */
   export interface RouteNamedMap {
     '/': RouteRecordInfo<'/', '/', Record<never, never>, Record<never, never>>,
+    '/admin/': RouteRecordInfo<'/admin/', '/admin', Record<never, never>, Record<never, never>>,
+    '/login': RouteRecordInfo<'/login', '/login', Record<never, never>, Record<never, never>>,
+    '/student/': RouteRecordInfo<'/student/', '/student', Record<never, never>, Record<never, never>>,
+    '/teacher/': RouteRecordInfo<'/teacher/', '/teacher', Record<never, never>, Record<never, never>>,
+    '/test-supabase': RouteRecordInfo<'/test-supabase', '/test-supabase', Record<never, never>, Record<never, never>>,
   }
 
   /**
@@ -34,6 +39,26 @@ declare module 'vue-router/auto-routes' {
   export interface _RouteFileInfoMap {
     'src/pages/index.vue': {
       routes: '/'
+      views: never
+    }
+    'src/pages/admin/index.vue': {
+      routes: '/admin/'
+      views: never
+    }
+    'src/pages/login.vue': {
+      routes: '/login'
+      views: never
+    }
+    'src/pages/student/index.vue': {
+      routes: '/student/'
+      views: never
+    }
+    'src/pages/teacher/index.vue': {
+      routes: '/teacher/'
+      views: never
+    }
+    'src/pages/test-supabase.vue': {
+      routes: '/test-supabase'
       views: never
     }
   }
