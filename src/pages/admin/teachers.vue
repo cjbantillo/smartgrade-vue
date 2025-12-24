@@ -116,50 +116,119 @@ meta:
               clearable
               density="compact"
               label="Search teachers..."
+              class="mb-4"
               variant="outlined"
             />
 
-            <v-table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Department</th>
-                  <th>Employee #</th>
-                  <th>Approved Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="teacher in filteredApprovedTeachers"
-                  :key="teacher.user_id"
+            <v-data-table
+              :headers="approvedHeaders"
+              :items="filteredApprovedTeachers"
+              :loading="loading"
+              class="elevation-1"
+              item-value="id"
+            >
+              <template #[`item.name`]="{ item }">
+                {{ getFullName(item) }}
+              </template>
+
+              <template #[`item.email`]="{ item }">
+                {{ getEmail(item) }}
+              </template>
+
+              <template #[`item.employee_number`]="{ item }">
+                {{ item.employee_number || "Not set" }}
+              </template>
+
+              <template #[`item.department`]="{ item }">
+                {{ item.department || "Not set" }}
+              </template>
+
+              <template #[`item.approved_at`]="{ item }">
+                {{ formatDate(item.profiles?.approved_at) }}
+              </template>
+
+              <template #[`item.status`]="{ item }">
+                <v-chip
+                  :color="item.profiles?.is_active ? 'success' : 'error'"
+                  size="small"
                 >
-                  <td>
-                    <div class="font-weight-medium">
-                      {{ teacher.first_name }} {{ teacher.middle_name || "" }}
-                      {{ teacher.last_name }}
-                    </div>
-                  </td>
-                  <td>{{ teacher.email }}</td>
-                  <td>{{ teacher.teacher?.department || "N/A" }}</td>
-                  <td>{{ teacher.teacher?.employee_number || "N/A" }}</td>
-                  <td>{{ formatDate(teacher.approved_at) }}</td>
-                  <td>
-                    <v-chip
-                      :color="teacher.is_active ? 'success' : 'error'"
-                      size="small"
-                    >
-                      {{ teacher.is_active ? "Active" : "Inactive" }}
-                    </v-chip>
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
+                  {{ item.profiles?.is_active ? "Active" : "Inactive" }}
+                </v-chip>
+              </template>
+
+              <template #[`item.actions`]="{ item }">
+                <v-btn
+                  class="mr-2"
+                  color="primary"
+                  size="small"
+                  variant="tonal"
+                  icon="mdi-pencil"
+                  @click="openEditDialog(item)"
+                />
+                <v-btn
+                  v-if="item.profiles?.is_active"
+                  color="error"
+                  size="small"
+                  variant="tonal"
+                  icon="mdi-account-off"
+                  @click="handleDeactivate(item)"
+                />
+              </template>
+            </v-data-table>
           </v-card-text>
         </v-card>
       </v-window-item>
     </v-window>
+
+    <!-- Edit Teacher Dialog -->
+    <v-dialog v-model="editDialog" max-width="600px">
+      <v-card>
+        <v-card-title class="text-h5"> Edit Teacher Data </v-card-title>
+        <v-card-text>
+          <v-form>
+            <v-text-field
+              v-model="teacherForm.employee_number"
+              label="Employee Number *"
+              placeholder="Enter employee number"
+              variant="outlined"
+              class="mb-3"
+            />
+            <v-text-field
+              v-model="teacherForm.department"
+              label="Department *"
+              placeholder="e.g., Senior High School"
+              variant="outlined"
+              class="mb-3"
+            />
+            <v-text-field
+              v-model="teacherForm.specialization"
+              label="Specialization"
+              placeholder="e.g., Mathematics, Science"
+              variant="outlined"
+              class="mb-3"
+            />
+            <v-text-field
+              v-model="teacherForm.contact_number"
+              label="Contact Number"
+              placeholder="e.g., 09XXXXXXXXX"
+              variant="outlined"
+            />
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="editDialog = false"> Cancel </v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            :loading="loading"
+            @click="saveTeacher"
+          >
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Reject Confirmation Dialog -->
     <v-dialog v-model="rejectDialog" max-width="500">
@@ -168,8 +237,10 @@ meta:
         <v-card-text>
           <p class="mb-4">
             Are you sure you want to reject the account for
-            <strong>{{ selectedTeacher?.first_name }}
-              {{ selectedTeacher?.last_name }}</strong>?
+            <strong
+              >{{ selectedTeacher?.first_name }}
+              {{ selectedTeacher?.last_name }}</strong
+            >?
           </p>
           <v-alert color="warning" variant="tonal">
             This will prevent the teacher from accessing the system.
@@ -196,188 +267,273 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { computed, onMounted, ref } from 'vue'
-  import { supabase } from '@/services/supabase'
-  import { useAuthStore } from '@/stores/auth'
+import { computed, onMounted, ref } from "vue";
+import { supabase } from "@/services/supabase";
+import { useAuthStore } from "@/stores/auth";
+import { useAdmin } from "@/composables/useAdmin";
 
-  const authStore = useAuthStore()
-  const currentTab = ref('pending')
-  const searchQuery = ref('')
-  const pendingTeachers = ref<any[]>([])
-  const approvedTeachers = ref<any[]>([])
-  const approving = ref<string | null>(null)
-  const rejecting = ref(false)
-  const rejectDialog = ref(false)
-  const selectedTeacher = ref<any>(null)
+const authStore = useAuthStore();
+const {
+  loading,
+  error,
+  fetchTeachers,
+  fetchPendingTeachers,
+  approveTeacher: approveTeacherApi,
+  upsertTeacher,
+  deactivateTeacher: deactivateTeacherApi,
+} = useAdmin();
 
-  const snackbar = ref({
-    show: false,
-    message: '',
-    color: 'success',
-  })
+const currentTab = ref("pending");
+const searchQuery = ref("");
+const pendingTeachers = ref<any[]>([]);
+const approvedTeachers = ref<any[]>([]);
+const allTeachers = ref<any[]>([]);
+const approving = ref<string | null>(null);
+const rejecting = ref(false);
+const rejectDialog = ref(false);
+const selectedTeacher = ref<any>(null);
+const editDialog = ref(false);
+const editingTeacher = ref<any>(null);
+const teacherForm = ref({
+  employee_number: "",
+  department: "",
+  specialization: "",
+  contact_number: "",
+});
 
-  const filteredApprovedTeachers = computed(() => {
-    if (!searchQuery.value) return approvedTeachers.value
+const snackbar = ref({
+  show: false,
+  message: "",
+  color: "success",
+});
 
-    const query = searchQuery.value.toLowerCase()
-    return approvedTeachers.value.filter(
-      teacher =>
-        teacher.first_name.toLowerCase().includes(query)
-        || teacher.last_name.toLowerCase().includes(query)
-        || teacher.email.toLowerCase().includes(query)
-        || teacher.teacher?.department?.toLowerCase().includes(query),
-    )
-  })
+const filteredApprovedTeachers = computed(() => {
+  if (!searchQuery.value) return approvedTeachers.value;
 
-  function formatDate (dateString: string | null) {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    })
+  const query = searchQuery.value.toLowerCase();
+  return approvedTeachers.value.filter((teacher) => {
+    const firstName = teacher.profiles?.first_name?.toLowerCase() || "";
+    const lastName = teacher.profiles?.last_name?.toLowerCase() || "";
+    const email = teacher.profiles?.email?.toLowerCase() || "";
+    const department = teacher.department?.toLowerCase() || "";
+
+    return (
+      firstName.includes(query) ||
+      lastName.includes(query) ||
+      email.includes(query) ||
+      department.includes(query)
+    );
+  });
+});
+
+const approvedHeaders = [
+  { title: "Name", value: "name", key: "name" },
+  { title: "Email", value: "email", key: "email" },
+  {
+    title: "Employee Number",
+    value: "employee_number",
+    key: "employee_number",
+  },
+  { title: "Department", value: "department", key: "department" },
+  { title: "Approved Date", value: "approved_at", key: "approved_at" },
+  { title: "Status", value: "status", key: "status" },
+  { title: "Actions", value: "actions", key: "actions", sortable: false },
+];
+
+function formatDate(dateString: string | null) {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+async function loadTeachers() {
+  // Fetch pending teachers from useAdmin composable
+  pendingTeachers.value = await fetchPendingTeachers();
+
+  // Fetch all teachers with profile data
+  allTeachers.value = await fetchTeachers();
+
+  // Filter approved teachers
+  approvedTeachers.value = allTeachers.value.filter(
+    (t: any) => t.profiles?.is_approved
+  );
+}
+
+async function approveTeacher(teacher: any) {
+  if (!authStore.profile?.user_id) {
+    showSnackbar("Admin user not found", "error");
+    return;
   }
 
-  async function loadTeachers () {
-    // Fetch pending teachers
-    const { data: pending } = await supabase
-      .from('profiles')
-      .select(
-        `
-      *,
-      teacher:teachers(
-        employee_number,
-        department
-      )
-    `,
-      )
-      .eq('role', 'teacher')
-      .eq('is_approved', false)
-      .order('created_at', { ascending: false })
+  approving.value = teacher.user_id;
 
-    pendingTeachers.value = pending || []
+  try {
+    const success = await approveTeacherApi(
+      teacher.user_id,
+      authStore.profile.user_id
+    );
 
-    // Fetch approved teachers
-    const { data: approved } = await supabase
-      .from('profiles')
-      .select(
-        `
-      *,
-      teacher:teachers(
-        employee_number,
-        department
-      )
-    `,
-      )
-      .eq('role', 'teacher')
-      .eq('is_approved', true)
-      .order('approved_at', { ascending: false })
-
-    approvedTeachers.value = approved || []
-  }
-
-  async function approveTeacher (teacher: any) {
-    approving.value = teacher.user_id
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_approved: true,
-          approved_by: authStore.user?.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('user_id', teacher.user_id)
-
-      if (error) throw error
-
+    if (success) {
       // Log the approval
-      await supabase.from('audit_logs').insert({
-        user_id: authStore.user?.id,
-        action: 'teacher_approved',
-        entity_type: 'profile',
+      await supabase.from("audit_logs").insert({
+        user_id: authStore.profile.user_id,
+        action: "teacher_approved",
+        entity_type: "profile",
         entity_id: teacher.user_id,
         new_values: {
           approved: true,
           teacher_name: `${teacher.first_name} ${teacher.last_name}`,
           teacher_email: teacher.email,
         },
-      })
+      });
 
-      snackbar.value = {
-        show: true,
-        message: `${teacher.first_name} ${teacher.last_name} has been approved`,
-        color: 'success',
-      }
-
-      await loadTeachers()
-    } catch (error: any) {
-      snackbar.value = {
-        show: true,
-        message: `Error: ${error.message}`,
-        color: 'error',
-      }
-    } finally {
-      approving.value = null
+      showSnackbar(
+        `${teacher.first_name} ${teacher.last_name} has been approved`,
+        "success"
+      );
+      await loadTeachers();
+    } else {
+      showSnackbar(error.value || "Failed to approve teacher", "error");
     }
+  } catch (err: any) {
+    showSnackbar(`Error: ${err.message}`, "error");
+  } finally {
+    approving.value = null;
+  }
+}
+
+function openEditDialog(teacher: any) {
+  editingTeacher.value = teacher;
+  teacherForm.value = {
+    employee_number: teacher.employee_number || "",
+    department: teacher.department || "",
+    specialization: teacher.specialization || "",
+    contact_number: teacher.contact_number || "",
+  };
+  editDialog.value = true;
+}
+
+async function saveTeacher() {
+  if (!editingTeacher.value) return;
+
+  const teacherData = {
+    ...teacherForm.value,
+    user_id: editingTeacher.value.user_id,
+  };
+
+  const success = await upsertTeacher(teacherData, editingTeacher.value.id);
+
+  if (success) {
+    showSnackbar("Teacher data updated successfully", "success");
+    editDialog.value = false;
+    await loadTeachers();
+  } else {
+    showSnackbar(error.value || "Failed to update teacher", "error");
+  }
+}
+
+async function handleDeactivate(teacher: any) {
+  if (
+    !confirm(
+      `Are you sure you want to deactivate ${teacher.profiles?.first_name} ${teacher.profiles?.last_name}?`
+    )
+  ) {
+    return;
   }
 
-  function openRejectDialog (teacher: any) {
-    selectedTeacher.value = teacher
-    rejectDialog.value = true
+  const success = await deactivateTeacherApi(teacher.user_id);
+
+  if (success) {
+    showSnackbar("Teacher deactivated successfully", "success");
+    await loadTeachers();
+  } else {
+    showSnackbar(error.value || "Failed to deactivate teacher", "error");
   }
+}
 
-  async function rejectTeacher () {
-    if (!selectedTeacher.value) return
+function showSnackbar(
+  message: string,
+  color: "success" | "error" | "warning" = "success"
+) {
+  snackbar.value = {
+    show: true,
+    message,
+    color,
+  };
+}
 
-    rejecting.value = true
+function getFullName(item: any) {
+  if (item.profiles) {
+    return `${item.profiles.first_name || ""} ${
+      item.profiles.last_name || ""
+    }`.trim();
+  }
+  return `${item.first_name || ""} ${item.last_name || ""}`.trim();
+}
 
-    try {
-      // Set account to inactive (soft reject)
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_active: false,
-          is_approved: false,
-        })
-        .eq('user_id', selectedTeacher.value.user_id)
+function getEmail(item: any) {
+  return item.profiles?.email || item.email || "";
+}
 
-      if (error) throw error
+function openRejectDialog(teacher: any) {
+  selectedTeacher.value = teacher;
+  rejectDialog.value = true;
+}
 
-      // Log the rejection
-      await supabase.from('audit_logs').insert({
-        user_id: authStore.user?.id,
-        action: 'teacher_rejected',
-        entity_type: 'profile',
-        entity_id: selectedTeacher.value.user_id,
-        new_values: {
-          rejected: true,
-          teacher_name: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}`,
-          teacher_email: selectedTeacher.value.email,
-        },
+async function rejectTeacher() {
+  if (!selectedTeacher.value) return;
+
+  rejecting.value = true;
+
+  try {
+    // Set account to inactive (soft reject)
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        is_active: false,
+        is_approved: false,
       })
+      .eq("user_id", selectedTeacher.value.user_id);
 
-      snackbar.value = {
-        show: true,
-        message: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}'s account has been rejected`,
-        color: 'warning',
-      }
+    if (error) throw error;
 
-      rejectDialog.value = false
-      selectedTeacher.value = null
-      await loadTeachers()
-    } catch (error: any) {
-      snackbar.value = {
-        show: true,
-        message: `Error: ${error.message}`,
-        color: 'error',
-      }
-    } finally {
-      rejecting.value = false
-    }
+    // Log the rejection
+    await supabase.from("audit_logs").insert({
+      user_id: authStore.user?.id,
+      action: "teacher_rejected",
+      entity_type: "profile",
+      entity_id: selectedTeacher.value.user_id,
+      new_values: {
+        rejected: true,
+        teacher_name: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}`,
+        teacher_email: selectedTeacher.value.email,
+      },
+    });
+
+    snackbar.value = {
+      show: true,
+      message: `${selectedTeacher.value.first_name} ${selectedTeacher.value.last_name}'s account has been rejected`,
+      color: "warning",
+    };
+
+    rejectDialog.value = false;
+    selectedTeacher.value = null;
+    await loadTeachers();
+  } catch (error: any) {
+    snackbar.value = {
+      show: true,
+      message: `Error: ${error.message}`,
+      color: "error",
+    };
+  } finally {
+    rejecting.value = false;
   }
+}
 
-  onMounted(() => {
-    loadTeachers()
-  })
+onMounted(() => {
+  loadTeachers();
+});
 </script>

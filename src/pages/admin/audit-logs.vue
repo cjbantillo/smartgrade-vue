@@ -73,7 +73,7 @@ meta:
     <v-card>
       <v-card-text>
         <div class="d-flex justify-space-between align-center mb-4">
-          <div class="text-h6">Activity Logs ({{ filteredLogs.length }})</div>
+          <div class="text-h6">Activity Logs ({{ totalLogs }})</div>
           <v-btn
             color="primary"
             :loading="loading"
@@ -84,20 +84,149 @@ meta:
           </v-btn>
         </div>
 
-        <v-alert v-if="loading" color="info" icon="mdi-loading" variant="tonal">
-          Loading audit logs...
-        </v-alert>
-
-        <v-alert
-          v-else-if="filteredLogs.length === 0"
-          color="info"
-          icon="mdi-information"
-          variant="tonal"
+        <v-data-table-server
+          :headers="headers"
+          :items="filteredLogs"
+          :items-length="totalLogs"
+          :items-per-page="itemsPerPage"
+          :loading="loading"
+          :page="page"
+          class="elevation-1"
+          @update:page="
+            page = $event;
+            handlePageChange();
+          "
+          @update:items-per-page="
+            itemsPerPage = $event;
+            handlePageChange();
+          "
         >
-          No audit logs found for the selected filters.
-        </v-alert>
+          <template #[`item.created_at`]="{ item }">
+            {{ formatDate(item.created_at) }}
+          </template>
 
-        <v-table v-else density="comfortable">
+          <template #[`item.user`]="{ item }">
+            <div>{{ getUserName(item) }}</div>
+            <div
+              v-if="item.profiles?.email"
+              class="text-caption text-medium-emphasis"
+            >
+              {{ item.profiles.email }}
+            </div>
+          </template>
+
+          <template #[`item.action`]="{ item }">
+            <v-chip :color="getActionColor(item.action)" size="small">
+              {{ item.action }}
+            </v-chip>
+          </template>
+
+          <template #[`item.entity_type`]="{ item }">
+            {{ item.entity_type }}
+          </template>
+
+          <template #[`item.entity_id`]="{ item }">
+            <code class="text-caption"
+              >{{ item.entity_id?.substring(0, 8) }}...</code
+            >
+          </template>
+
+          <template #[`item.ip_address`]="{ item }">
+            {{ item.ip_address || "N/A" }}
+          </template>
+
+          <template #[`item.actions`]="{ item }">
+            <v-btn
+              color="primary"
+              size="small"
+              variant="tonal"
+              icon="mdi-eye"
+              @click="openDetailDialog(item)"
+            />
+          </template>
+        </v-data-table-server>
+      </v-card-text>
+    </v-card>
+
+    <!-- Detail Dialog -->
+    <v-dialog v-model="detailDialog" max-width="800px">
+      <v-card v-if="selectedLog">
+        <v-card-title class="text-h5"> Audit Log Details </v-card-title>
+        <v-card-text>
+          <v-row>
+            <v-col cols="6">
+              <div class="text-subtitle-2 mb-1">Timestamp</div>
+              <div>{{ formatDate(selectedLog.created_at) }}</div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-subtitle-2 mb-1">User</div>
+              <div>{{ getUserName(selectedLog) }}</div>
+              <div v-if="selectedLog.profiles?.email" class="text-caption">
+                {{ selectedLog.profiles.email }}
+              </div>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-subtitle-2 mb-1">Action</div>
+              <v-chip :color="getActionColor(selectedLog.action)">
+                {{ selectedLog.action }}
+              </v-chip>
+            </v-col>
+            <v-col cols="6">
+              <div class="text-subtitle-2 mb-1">Entity Type</div>
+              <div>{{ selectedLog.entity_type }}</div>
+            </v-col>
+            <v-col cols="12">
+              <div class="text-subtitle-2 mb-1">Entity ID</div>
+              <code class="text-caption">{{ selectedLog.entity_id }}</code>
+            </v-col>
+            <v-col v-if="selectedLog.ip_address" cols="6">
+              <div class="text-subtitle-2 mb-1">IP Address</div>
+              <div>{{ selectedLog.ip_address }}</div>
+            </v-col>
+            <v-col v-if="selectedLog.user_agent" cols="6">
+              <div class="text-subtitle-2 mb-1">User Agent</div>
+              <div class="text-caption">
+                {{ selectedLog.user_agent }}
+              </div>
+            </v-col>
+          </v-row>
+
+          <v-divider class="my-4" />
+
+          <v-row v-if="selectedLog.old_values || selectedLog.new_values">
+            <v-col v-if="selectedLog.old_values" cols="6">
+              <div class="text-subtitle-2 mb-2">Old Values</div>
+              <pre class="bg-grey-lighten-4 pa-3 rounded text-caption">{{
+                formatJson(selectedLog.old_values)
+              }}</pre>
+            </v-col>
+            <v-col v-if="selectedLog.new_values" cols="6">
+              <div class="text-subtitle-2 mb-2">New Values</div>
+              <pre class="bg-grey-lighten-4 pa-3 rounded text-caption">{{
+                formatJson(selectedLog.new_values)
+              }}</pre>
+            </v-col>
+          </v-row>
+
+          <v-row v-if="selectedLog.metadata">
+            <v-col cols="12">
+              <div class="text-subtitle-2 mb-2">Metadata</div>
+              <pre class="bg-grey-lighten-4 pa-3 rounded text-caption">{{
+                formatJson(selectedLog.metadata)
+              }}</pre>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="detailDialog = false"> Close </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-container>
+</template>
+
+<script lang="ts" setup>
           <thead>
             <tr>
               <th>Timestamp</th>
