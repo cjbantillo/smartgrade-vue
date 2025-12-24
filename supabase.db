@@ -1,0 +1,361 @@
+DROP TABLE IF EXISTS public.archived_students CASCADE;
+DROP TABLE IF EXISTS public.audit_logs CASCADE;
+DROP TABLE IF EXISTS public.certificates CASCADE;
+DROP TABLE IF EXISTS public.class_enrollments CASCADE;
+DROP TABLE IF EXISTS public.document_edits CASCADE;
+DROP TABLE IF EXISTS public.final_grades CASCADE;
+DROP TABLE IF EXISTS public.grade_finalization_status CASCADE;
+DROP TABLE IF EXISTS public.grades CASCADE;
+DROP TABLE IF EXISTS public.grading_periods CASCADE;
+DROP TABLE IF EXISTS public.honors CASCADE;
+DROP TABLE IF EXISTS public.teacher_classes CASCADE;
+DROP TABLE IF EXISTS public.teachers CASCADE;
+DROP TABLE IF EXISTS public.students CASCADE;
+DROP TABLE IF EXISTS public.subjects CASCADE;
+DROP TABLE IF EXISTS public.school_years CASCADE;
+DROP TABLE IF EXISTS public.system_settings CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+CREATE TABLE public.profiles (
+  user_id uuid NOT NULL,
+  email character varying UNIQUE,
+  role character varying NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
+  first_name character varying NOT NULL,
+  last_name character varying NOT NULL,
+  middle_name character varying,
+  is_active boolean NOT NULL DEFAULT true,
+  is_approved boolean NOT NULL DEFAULT false,
+  approved_by uuid,
+  approved_at timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (user_id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE,
+  CONSTRAINT profiles_approved_by_fkey FOREIGN KEY (approved_by) REFERENCES auth.users(id),
+  CONSTRAINT profiles_email_deped_check CHECK (
+    (role IN ('admin', 'teacher') AND email LIKE '%@deped.gov.ph') OR
+    (role = 'student')
+  ),
+  CONSTRAINT profiles_email_required_check CHECK (
+    (role IN ('admin', 'teacher') AND email IS NOT NULL) OR
+    (role = 'student')
+  )
+);
+
+CREATE INDEX idx_profiles_email ON public.profiles(email);
+CREATE INDEX idx_profiles_role ON public.profiles(role);
+
+CREATE TABLE public.school_years (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  year_code character varying NOT NULL UNIQUE,
+  year_start date NOT NULL,
+  year_end date NOT NULL,
+  is_active boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT school_years_pkey PRIMARY KEY (id)
+);
+
+CREATE TABLE public.teachers (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  employee_number character varying NOT NULL UNIQUE,
+  department character varying NOT NULL,
+  specialization character varying,
+  contact_number character varying,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT teachers_pkey PRIMARY KEY (id),
+  CONSTRAINT teachers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_teachers_user_id ON public.teachers(user_id);
+CREATE INDEX idx_teachers_employee_number ON public.teachers(employee_number);
+
+CREATE TABLE public.students (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL UNIQUE,
+  student_number character varying NOT NULL UNIQUE,
+  lrn character varying NOT NULL UNIQUE CHECK (lrn ~ '^\d{12}$'),
+  grade_level character varying NOT NULL CHECK (grade_level IN ('11', '12')),
+  track character varying NOT NULL,
+  strand character varying NOT NULL,
+  section character varying NOT NULL,
+  birth_date date NOT NULL,
+  birth_place character varying,
+  gender character varying NOT NULL CHECK (gender IN ('Male', 'Female')),
+  contact_number character varying,
+  address text,
+  guardian_name character varying,
+  guardian_contact character varying,
+  enrollment_date date NOT NULL,
+  is_archived boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT students_pkey PRIMARY KEY (id),
+  CONSTRAINT students_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_students_user_id ON public.students(user_id);
+CREATE INDEX idx_students_lrn ON public.students(lrn);
+CREATE INDEX idx_students_student_number ON public.students(student_number);
+
+CREATE TABLE public.subjects (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  subject_code character varying NOT NULL UNIQUE,
+  subject_name character varying NOT NULL,
+  grade_level character varying NOT NULL CHECK (grade_level IN ('11', '12')),
+  track character varying NOT NULL,
+  strand character varying,
+  semester character varying NOT NULL CHECK (semester IN ('1', '2')),
+  subject_type character varying NOT NULL CHECK (subject_type IN ('Core', 'Applied', 'Specialized')),
+  units numeric NOT NULL DEFAULT 1.0,
+  description text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT subjects_pkey PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_subjects_code ON public.subjects(subject_code);
+CREATE INDEX idx_subjects_grade_level ON public.subjects(grade_level);
+
+CREATE TABLE public.grading_periods (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  school_year_id uuid NOT NULL,
+  period_name character varying NOT NULL,
+  period_number smallint NOT NULL CHECK (period_number >= 1 AND period_number <= 4),
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  is_active boolean NOT NULL DEFAULT false,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT grading_periods_pkey PRIMARY KEY (id),
+  CONSTRAINT grading_periods_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_grading_periods_school_year ON public.grading_periods(school_year_id);
+
+CREATE TABLE public.teacher_classes (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  teacher_id uuid NOT NULL,
+  subject_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  section character varying NOT NULL,
+  created_by uuid NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT teacher_classes_pkey PRIMARY KEY (id),
+  CONSTRAINT teacher_classes_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.teachers(id) ON DELETE CASCADE,
+  CONSTRAINT teacher_classes_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE CASCADE,
+  CONSTRAINT teacher_classes_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE,
+  CONSTRAINT teacher_classes_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_teacher_classes_teacher ON public.teacher_classes(teacher_id);
+CREATE INDEX idx_teacher_classes_subject ON public.teacher_classes(subject_id);
+
+CREATE TABLE public.class_enrollments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  teacher_class_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  enrolled_by uuid NOT NULL,
+  enrolled_at timestamptz NOT NULL DEFAULT now(),
+  is_active boolean NOT NULL DEFAULT true,
+  unenrolled_at timestamptz,
+  unenroll_reason text,
+  CONSTRAINT class_enrollments_pkey PRIMARY KEY (id),
+  CONSTRAINT class_enrollments_teacher_class_id_fkey FOREIGN KEY (teacher_class_id) REFERENCES public.teacher_classes(id) ON DELETE CASCADE,
+  CONSTRAINT class_enrollments_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT class_enrollments_enrolled_by_fkey FOREIGN KEY (enrolled_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_class_enrollments_class ON public.class_enrollments(teacher_class_id);
+CREATE INDEX idx_class_enrollments_student ON public.class_enrollments(student_id);
+
+CREATE TABLE public.grades (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  subject_id uuid NOT NULL,
+  teacher_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  grading_period_id uuid NOT NULL,
+  written_work_score numeric,
+  written_work_total numeric,
+  performance_task_score numeric,
+  performance_task_total numeric,
+  quarterly_assessment_score numeric,
+  quarterly_assessment_total numeric,
+  quarterly_grade numeric CHECK (quarterly_grade IS NULL OR (quarterly_grade >= 60 AND quarterly_grade <= 100)),
+  remarks text,
+  entered_by uuid NOT NULL,
+  entered_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT grades_pkey PRIMARY KEY (id),
+  CONSTRAINT grades_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT grades_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE CASCADE,
+  CONSTRAINT grades_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.teachers(id) ON DELETE CASCADE,
+  CONSTRAINT grades_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE,
+  CONSTRAINT grades_grading_period_id_fkey FOREIGN KEY (grading_period_id) REFERENCES public.grading_periods(id) ON DELETE CASCADE,
+  CONSTRAINT grades_entered_by_fkey FOREIGN KEY (entered_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_grades_student ON public.grades(student_id);
+CREATE INDEX idx_grades_subject ON public.grades(subject_id);
+CREATE INDEX idx_grades_teacher ON public.grades(teacher_id);
+
+CREATE TABLE public.final_grades (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  subject_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  semester character varying NOT NULL CHECK (semester IN ('1', '2')),
+  q1_grade numeric,
+  q2_grade numeric,
+  final_grade numeric CHECK (final_grade IS NULL OR (final_grade >= 60 AND final_grade <= 100)),
+  remarks character varying CHECK (remarks IS NULL OR remarks IN ('PASSED', 'FAILED', 'INC', 'DROPPED')),
+  computed_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT final_grades_pkey PRIMARY KEY (id),
+  CONSTRAINT final_grades_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT final_grades_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE CASCADE,
+  CONSTRAINT final_grades_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_final_grades_student ON public.final_grades(student_id);
+
+CREATE TABLE public.grade_finalization_status (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  semester character varying NOT NULL CHECK (semester IN ('1', '2')),
+  is_finalized boolean NOT NULL DEFAULT false,
+  general_average numeric,
+  finalized_by uuid,
+  finalized_at timestamptz,
+  unlock_count integer NOT NULL DEFAULT 0,
+  last_unlocked_by uuid,
+  last_unlocked_at timestamptz,
+  unlock_reason text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT grade_finalization_status_pkey PRIMARY KEY (id),
+  CONSTRAINT grade_finalization_status_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT grade_finalization_status_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE,
+  CONSTRAINT grade_finalization_status_finalized_by_fkey FOREIGN KEY (finalized_by) REFERENCES public.profiles(user_id),
+  CONSTRAINT grade_finalization_status_last_unlocked_by_fkey FOREIGN KEY (last_unlocked_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_grade_finalization_student ON public.grade_finalization_status(student_id);
+
+CREATE TABLE public.honors (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  semester character varying NOT NULL CHECK (semester IN ('1', '2')),
+  honor_type character varying NOT NULL CHECK (honor_type IN ('With Highest Honors', 'With High Honors', 'With Honors')),
+  general_average numeric NOT NULL CHECK (general_average >= 60 AND general_average <= 100),
+  awarded_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT honors_pkey PRIMARY KEY (id),
+  CONSTRAINT honors_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT honors_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_honors_student ON public.honors(student_id);
+
+CREATE TABLE public.certificates (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  certificate_type character varying NOT NULL CHECK (certificate_type IN ('honors', 'good_moral', 'completion')),
+  school_year_id uuid NOT NULL,
+  issued_date date NOT NULL,
+  pdf_url text,
+  qr_code_url text,
+  is_revoked boolean NOT NULL DEFAULT false,
+  revoked_by uuid,
+  revoked_at timestamptz,
+  revocation_reason text,
+  generated_by uuid NOT NULL,
+  generated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT certificates_pkey PRIMARY KEY (id),
+  CONSTRAINT certificates_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT certificates_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE,
+  CONSTRAINT certificates_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES public.profiles(user_id),
+  CONSTRAINT certificates_generated_by_fkey FOREIGN KEY (generated_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_certificates_student ON public.certificates(student_id);
+
+CREATE TABLE public.document_edits (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_type character varying NOT NULL CHECK (document_type IN ('SF9', 'SF10')),
+  student_id uuid NOT NULL,
+  school_year_id uuid NOT NULL,
+  field_name character varying NOT NULL,
+  old_value text,
+  new_value text,
+  edited_by uuid NOT NULL,
+  edited_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT document_edits_pkey PRIMARY KEY (id),
+  CONSTRAINT document_edits_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE,
+  CONSTRAINT document_edits_school_year_id_fkey FOREIGN KEY (school_year_id) REFERENCES public.school_years(id) ON DELETE CASCADE,
+  CONSTRAINT document_edits_edited_by_fkey FOREIGN KEY (edited_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_document_edits_student ON public.document_edits(student_id);
+
+CREATE TABLE public.audit_logs (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  action character varying NOT NULL,
+  entity_type character varying NOT NULL,
+  entity_id uuid NOT NULL,
+  old_values jsonb,
+  new_values jsonb,
+  metadata jsonb,
+  ip_address inet,
+  user_agent text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id),
+  CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_audit_logs_user ON public.audit_logs(user_id);
+CREATE INDEX idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_created ON public.audit_logs(created_at);
+
+CREATE TABLE public.archived_students (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  student_id uuid NOT NULL,
+  student_data jsonb NOT NULL,
+  grades_data jsonb NOT NULL,
+  graduation_date date NOT NULL,
+  graduation_honors character varying,
+  archived_by uuid NOT NULL,
+  archived_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT archived_students_pkey PRIMARY KEY (id),
+  CONSTRAINT archived_students_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id),
+  CONSTRAINT archived_students_archived_by_fkey FOREIGN KEY (archived_by) REFERENCES public.profiles(user_id)
+);
+
+CREATE INDEX idx_archived_students_student ON public.archived_students(student_id);
+
+CREATE TABLE public.system_settings (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  setting_key character varying NOT NULL UNIQUE,
+  setting_value text NOT NULL,
+  description text,
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT system_settings_pkey PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_system_settings_key ON public.system_settings(setting_key);
+
+INSERT INTO public.school_years (year_code, year_start, year_end, is_active) VALUES
+('2024-2025', '2024-06-01', '2025-03-31', true);
+
+INSERT INTO public.system_settings (setting_key, setting_value, description) VALUES
+('passing_grade', '75', 'Minimum passing grade'),
+('honors_threshold_highest', '98', 'Minimum GPA for With Highest Honors'),
+('honors_threshold_high', '95', 'Minimum GPA for With High Honors'),
+('honors_threshold', '90', 'Minimum GPA for With Honors');

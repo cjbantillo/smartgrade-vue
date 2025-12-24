@@ -41,19 +41,18 @@ meta:
 
             <!-- Login Form -->
             <v-form ref="formRef" @submit.prevent="handleLogin">
-              <!-- Email Field -->
+              <!-- Email/LRN Field -->
               <v-text-field
                 v-model="email"
-                autocomplete="email"
+                autocomplete="username"
                 clearable
                 :disabled="isLoading"
                 :error-messages="emailErrors"
-                label="Email Address"
-                placeholder="juan.delacruz@deped.gov.ph"
-                prepend-inner-icon="mdi-email"
+                label="Email or LRN (Students)"
+                placeholder="email@deped.gov.ph or 123456789012"
+                prepend-inner-icon="mdi-account"
                 required
                 :rules="emailRules"
-                type="email"
                 variant="outlined"
                 @blur="validateEmail"
               />
@@ -83,7 +82,8 @@ meta:
               >
                 <div class="text-caption">
                   <v-icon size="small">mdi-information</v-icon>
-                  Only @deped.gov.ph email addresses are accepted
+                  Admin/Teacher: Use @deped.gov.ph email • Students: Use email
+                  or 12-digit LRN
                 </div>
               </v-alert>
 
@@ -199,11 +199,22 @@ async function handleLogin() {
     } = await supabase.auth.getSession();
 
     if (session) {
-      authStore.setUser(result.user, session);
-    }
+      // setUser will fetch profile and role
+      await authStore.setUser(result.user, session);
 
-    // Redirect to home (router will handle role-based redirect in Phase 4)
-    router.push("/");
+      // Redirect based on user role
+      const role = authStore.userRole;
+      if (role === "admin") {
+        router.push("/admin");
+      } else if (role === "teacher") {
+        router.push("/teacher");
+      } else if (role === "student") {
+        router.push("/student");
+      } else {
+        // Fallback to home if role not recognized
+        router.push("/");
+      }
+    }
   } else {
     errorMessage.value = result.error || "Login failed";
   }
