@@ -13,9 +13,14 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppFooter: typeof import('./components/AppFooter.vue')['default']
     AppHeader: typeof import('./components/layout/AppHeader.vue')['default']
+    CertificateTemplate: typeof import('./components/CertificateTemplate.vue')['default']
+    ConfirmDialog: typeof import('./components/shared/ConfirmDialog.vue')['default']
+    EmptyState: typeof import('./components/shared/EmptyState.vue')['default']
+    ErrorDisplay: typeof import('./components/shared/ErrorDisplay.vue')['default']
     HelloWorld: typeof import('./components/HelloWorld.vue')['default']
     NavigationDrawer: typeof import('./components/layout/NavigationDrawer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UnsavedChangesDialog: typeof import('./components/shared/UnsavedChangesDialog.vue')['default']
   }
 }
