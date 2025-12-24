@@ -94,9 +94,10 @@ meta:
       <v-col cols="12" md="6">
         <v-card>
           <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2" color="primary"
-              >mdi-account-multiple-check</v-icon
-            >
+            <v-icon
+              class="mr-2"
+              color="primary"
+            >mdi-account-multiple-check</v-icon>
             Teacher Approvals
           </v-card-title>
           <v-card-text>
@@ -197,10 +198,8 @@ meta:
           </v-alert-title>
           <div class="text-body-2">
             <p class="mb-1">
-              <strong
-                >Admins serve as system overseers, not primary
-                operators.</strong
-              >
+              <strong>Admins serve as system overseers, not primary
+                operators.</strong>
             </p>
             <ul class="ml-4">
               <li>
@@ -217,41 +216,41 @@ meta:
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from "vue";
-import { supabase } from "@/services/supabase";
+  import { onMounted, ref } from 'vue'
+  import { supabase } from '@/services/supabase'
 
-const pendingTeachers = ref(0);
-const approvedTeachers = ref(0);
-const recentAuditCount = ref(0);
+  const pendingTeachers = ref(0)
+  const approvedTeachers = ref(0)
+  const recentAuditCount = ref(0)
 
-onMounted(async () => {
-  // Fetch pending teachers count
-  const { count: pending } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("role", "teacher")
-    .eq("is_approved", false);
+  onMounted(async () => {
+    // Fetch pending teachers count
+    const { count: pending } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'teacher')
+      .eq('is_approved', false)
 
-  pendingTeachers.value = pending || 0;
+    pendingTeachers.value = pending || 0
 
-  // Fetch approved teachers count
-  const { count: approved } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true })
-    .eq("role", "teacher")
-    .eq("is_approved", true);
+    // Fetch approved teachers count
+    const { count: approved } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('role', 'teacher')
+      .eq('is_approved', true)
 
-  approvedTeachers.value = approved || 0;
+    approvedTeachers.value = approved || 0
 
-  // Fetch recent audit logs count (last 7 days)
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Fetch recent audit logs count (last 7 days)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const { count: auditCount } = await supabase
-    .from("audit_logs")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", sevenDaysAgo.toISOString());
+    const { count: auditCount } = await supabase
+      .from('audit_logs')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', sevenDaysAgo.toISOString())
 
-  recentAuditCount.value = auditCount || 0;
-});
+    recentAuditCount.value = auditCount || 0
+  })
 </script>

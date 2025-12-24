@@ -21,6 +21,8 @@ declare module 'vue' {
     NavigationDrawer: typeof import('./components/layout/NavigationDrawer.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SF10Template: typeof import('./components/documents/SF10Template.vue')['default']
+    SF9Template: typeof import('./components/documents/SF9Template.vue')['default']
     UnsavedChangesDialog: typeof import('./components/shared/UnsavedChangesDialog.vue')['default']
   }
 }

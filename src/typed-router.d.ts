@@ -29,6 +29,7 @@ declare module 'vue-router/auto-routes' {
     '/student/documents': RouteRecordInfo<'/student/documents', '/student/documents', Record<never, never>, Record<never, never>>,
     '/student/grades': RouteRecordInfo<'/student/grades', '/student/grades', Record<never, never>, Record<never, never>>,
     '/teacher/': RouteRecordInfo<'/teacher/', '/teacher', Record<never, never>, Record<never, never>>,
+    '/teacher/certificates/': RouteRecordInfo<'/teacher/certificates/', '/teacher/certificates', Record<never, never>, Record<never, never>>,
     '/teacher/certificates/[studentId]/[schoolYearId]': RouteRecordInfo<'/teacher/certificates/[studentId]/[schoolYearId]', '/teacher/certificates/:studentId/:schoolYearId', { studentId: ParamValue<true>, schoolYearId: ParamValue<true> }, { studentId: ParamValue<false>, schoolYearId: ParamValue<false> }>,
     '/teacher/classes': RouteRecordInfo<'/teacher/classes', '/teacher/classes', Record<never, never>, Record<never, never>, '/teacher/classes/[id]' | '/teacher/classes/[id]/grades'>,
     '/teacher/classes/[id]': RouteRecordInfo<'/teacher/classes/[id]', '/teacher/classes/:id', { id: ParamValue<true> }, { id: ParamValue<false> }, '/teacher/classes/[id]/grades'>,
@@ -36,7 +37,8 @@ declare module 'vue-router/auto-routes' {
     '/teacher/documents/sf10/[studentId]': RouteRecordInfo<'/teacher/documents/sf10/[studentId]', '/teacher/documents/sf10/:studentId', { studentId: ParamValue<true> }, { studentId: ParamValue<false> }>,
     '/teacher/documents/sf9/[studentId]/[schoolYearId]': RouteRecordInfo<'/teacher/documents/sf9/[studentId]/[schoolYearId]', '/teacher/documents/sf9/:studentId/:schoolYearId', { studentId: ParamValue<true>, schoolYearId: ParamValue<true> }, { studentId: ParamValue<false>, schoolYearId: ParamValue<false> }>,
     '/test-supabase': RouteRecordInfo<'/test-supabase', '/test-supabase', Record<never, never>, Record<never, never>>,
-    '/verify': RouteRecordInfo<'/verify', '/verify', Record<never, never>, Record<never, never>>,
+    '/verify': RouteRecordInfo<'/verify', '/verify', Record<never, never>, Record<never, never>, '/verify/[id]'>,
+    '/verify/[id]': RouteRecordInfo<'/verify/[id]', '/verify/:id', { id: ParamValue<true> }, { id: ParamValue<false> }>,
   }
 
   /**
@@ -94,6 +96,10 @@ declare module 'vue-router/auto-routes' {
       routes: '/teacher/'
       views: never
     }
+    'src/pages/teacher/certificates/index.vue': {
+      routes: '/teacher/certificates/'
+      views: never
+    }
     'src/pages/teacher/certificates/[studentId]/[schoolYearId].vue': {
       routes: '/teacher/certificates/[studentId]/[schoolYearId]'
       views: never
@@ -123,7 +129,11 @@ declare module 'vue-router/auto-routes' {
       views: never
     }
     'src/pages/verify.vue': {
-      routes: '/verify'
+      routes: '/verify' | '/verify/[id]'
+      views: 'default'
+    }
+    'src/pages/verify/[id].vue': {
+      routes: '/verify/[id]'
       views: never
     }
   }

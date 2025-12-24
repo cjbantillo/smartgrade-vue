@@ -1,21 +1,21 @@
 <template>
-  <v-container fluid class="pa-6">
+  <v-container class="pa-6" fluid>
     <v-row justify="center">
-      <v-col cols="12" md="10" lg="8">
+      <v-col cols="12" lg="8" md="10">
         <!-- Header -->
         <div class="text-center mb-8">
-          <v-icon size="64" color="primary">mdi-shield-check</v-icon>
+          <v-icon color="primary" size="64">mdi-shield-check</v-icon>
           <h1 class="text-h3 font-weight-bold mt-4 mb-2">
             Certificate Verification
           </h1>
           <p class="text-h6 text-medium-emphasis">
-            Verify the authenticity of certificates issued by<br />
+            Verify the authenticity of certificates issued by<br>
             Ampayon National High School - Senior High School
           </p>
         </div>
 
         <!-- Verification Input -->
-        <v-card class="mb-6" v-if="!verificationResult">
+        <v-card v-if="!verificationResult" class="mb-6">
           <v-card-title class="bg-primary">
             <v-icon start>mdi-magnify</v-icon>
             Enter Verification Code
@@ -28,28 +28,28 @@
 
             <v-text-field
               v-model="verificationCode"
+              class="mb-4"
+              :error-messages="inputError"
               label="Verification Code"
               placeholder="CERT-2024-XXXXXXXX"
-              variant="outlined"
               prepend-inner-icon="mdi-qrcode"
-              :error-messages="inputError"
+              variant="outlined"
               @keyup.enter="handleVerify"
-              class="mb-4"
-            ></v-text-field>
+            />
 
             <v-btn
-              color="primary"
-              size="large"
               block
-              :loading="verifying"
+              color="primary"
               :disabled="!verificationCode"
+              :loading="verifying"
+              size="large"
               @click="handleVerify"
             >
               <v-icon start>mdi-shield-check</v-icon>
               Verify Certificate
             </v-btn>
 
-            <v-divider class="my-6"></v-divider>
+            <v-divider class="my-6" />
 
             <div class="text-center">
               <p class="text-body-2 text-medium-emphasis mb-2">
@@ -66,7 +66,7 @@
         <template
           v-else-if="verificationResult.valid && verificationResult.certificate"
         >
-          <v-alert type="success" variant="elevated" class="mb-6" prominent>
+          <v-alert class="mb-6" prominent type="success" variant="elevated">
             <v-row align="center">
               <v-col cols="auto">
                 <v-icon size="48">mdi-check-circle</v-icon>
@@ -178,12 +178,12 @@
 
                 <!-- Show GPA only for honors certificates -->
                 <v-col
-                  cols="12"
                   v-if="
                     verificationResult.certificate.certificate_type === 'honors'
                   "
+                  cols="12"
                 >
-                  <v-divider class="my-2"></v-divider>
+                  <v-divider class="my-2" />
                   <p class="text-body-2 text-medium-emphasis mb-1">
                     General Average
                   </p>
@@ -194,10 +194,10 @@
                   </p>
                   <v-chip
                     v-if="verificationResult.certificate.honors_designation"
-                    color="success"
-                    variant="elevated"
-                    size="large"
                     class="mt-2"
+                    color="success"
+                    size="large"
+                    variant="elevated"
                   >
                     {{ verificationResult.certificate.honors_designation }}
                   </v-chip>
@@ -210,7 +210,7 @@
           <v-card class="mb-6">
             <v-card-text class="text-center py-4 bg-grey-lighten-4">
               <p class="text-body-2 text-medium-emphasis mb-1">
-                <v-icon size="small" class="mr-1">mdi-clock-outline</v-icon>
+                <v-icon class="mr-1" size="small">mdi-clock-outline</v-icon>
                 Verified on: {{ new Date().toLocaleString() }}
               </p>
               <p class="text-caption text-medium-emphasis">
@@ -224,8 +224,8 @@
           <div class="text-center">
             <v-btn
               color="primary"
-              variant="outlined"
               size="large"
+              variant="outlined"
               @click="resetVerification"
             >
               Verify Another Certificate
@@ -235,7 +235,7 @@
 
         <!-- Verification Result: INVALID -->
         <template v-else-if="verificationResult && !verificationResult.valid">
-          <v-alert type="error" variant="elevated" prominent class="mb-6">
+          <v-alert class="mb-6" prominent type="error" variant="elevated">
             <v-row align="center">
               <v-col cols="auto">
                 <v-icon size="48">mdi-alert-circle</v-icon>
@@ -245,7 +245,7 @@
                 <p class="text-body-1 mt-1">
                   {{
                     verificationResult.error ||
-                    "The verification code could not be validated."
+                      "The verification code could not be validated."
                   }}
                 </p>
               </v-col>
@@ -271,7 +271,7 @@
                 </li>
                 <li>The certificate is fraudulent</li>
               </ul>
-              <v-divider class="my-4"></v-divider>
+              <v-divider class="my-4" />
               <p class="text-body-2 text-medium-emphasis">
                 If you believe this is an error, please contact the school
                 administration with the verification code:
@@ -283,8 +283,8 @@
           <div class="text-center">
             <v-btn
               color="primary"
-              variant="outlined"
               size="large"
+              variant="outlined"
               @click="resetVerification"
             >
               Try Again
@@ -296,7 +296,7 @@
         <v-card class="mt-8 bg-blue-lighten-5">
           <v-card-text class="pa-6">
             <h3 class="text-h6 font-weight-bold mb-3">
-              <v-icon start color="info">mdi-information</v-icon>
+              <v-icon color="info" start>mdi-information</v-icon>
               About Certificate Verification
             </h3>
             <p class="text-body-2 mb-2">
@@ -320,80 +320,84 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
-import { useRoute } from "vue-router";
-import {
-  useCertificates,
-  type CertificateVerification,
-} from "@/composables/useCertificates";
+  import { computed, onMounted, ref } from 'vue'
+  import { useRoute } from 'vue-router'
+  import {
+    type CertificateVerification,
+    useCertificates,
+  } from '@/composables/useCertificates'
 
-const route = useRoute();
-const { loading: verifying, verifyCertificate } = useCertificates();
+  const route = useRoute()
+  const { loading: verifying, verifyCertificate } = useCertificates()
 
-// Component state
-const verificationCode = ref("");
-const inputError = ref<string | null>(null);
-const verificationResult = ref<CertificateVerification | null>(null);
+  // Component state
+  const verificationCode = ref('')
+  const inputError = ref<string | null>(null)
+  const verificationResult = ref<CertificateVerification | null>(null)
 
-// Computed properties
-const studentFullName = computed(() => {
-  if (!verificationResult.value?.certificate?.student) return "";
-  const { first_name, middle_name, last_name } =
-    verificationResult.value.certificate.student;
-  return `${first_name} ${
-    middle_name ? middle_name + " " : ""
-  }${last_name}`.toUpperCase();
-});
+  // Computed properties
+  const studentFullName = computed(() => {
+    if (!verificationResult.value?.certificate?.student) return ''
+    const { first_name, middle_name, last_name }
+      = verificationResult.value.certificate.student
+    return `${first_name} ${
+      middle_name ? middle_name + ' ' : ''
+    }${last_name}`.toUpperCase()
+  })
 
-// Methods
-function validateCode(code: string): boolean {
-  // Expected format: CERT-YYYY-XXXXXXXX
-  const pattern = /^CERT-\d{4}-[A-Z0-9]{8}$/;
-  return pattern.test(code.toUpperCase());
-}
-
-async function handleVerify() {
-  inputError.value = null;
-
-  // Validate format
-  const code = verificationCode.value.trim().toUpperCase();
-  if (!validateCode(code)) {
-    inputError.value = "Invalid format. Expected: CERT-YYYY-XXXXXXXX";
-    return;
+  // Methods
+  function validateCode (code: string): boolean {
+    // Expected format: CERT-YYYY-XXXXXXXX
+    const pattern = /^CERT-\d{4}-[A-Z0-9]{8}$/
+    return pattern.test(code.toUpperCase())
   }
 
-  // Perform verification
-  const result = await verifyCertificate(code);
-  verificationResult.value = result;
-}
+  async function handleVerify () {
+    inputError.value = null
 
-function resetVerification() {
-  verificationCode.value = "";
-  verificationResult.value = null;
-  inputError.value = null;
-}
+    // Validate format
+    const code = verificationCode.value.trim().toUpperCase()
+    if (!validateCode(code)) {
+      inputError.value = 'Invalid format. Expected: CERT-YYYY-XXXXXXXX'
+      return
+    }
 
-function getCertificateTypeName(type: string): string {
-  switch (type) {
-    case "honors":
-      return "Certificate of Academic Excellence (Honors)";
-    case "good_moral":
-      return "Certificate of Good Moral Character";
-    case "completion":
-      return "Certificate of Completion";
-    default:
-      return type;
+    // Perform verification
+    const result = await verifyCertificate(code)
+    verificationResult.value = result
   }
-}
 
-onMounted(() => {
-  // Check if verification code is in URL query params (from QR code scan)
-  const codeParam = route.query.code as string;
-  if (codeParam) {
-    verificationCode.value = codeParam;
-    handleVerify();
+  function resetVerification () {
+    verificationCode.value = ''
+    verificationResult.value = null
+    inputError.value = null
   }
-});
+
+  function getCertificateTypeName (type: string): string {
+    switch (type) {
+      case 'honors': {
+        return 'Certificate of Academic Excellence (Honors)'
+      }
+      case 'good_moral': {
+        return 'Certificate of Good Moral Character'
+      }
+      case 'completion': {
+        return 'Certificate of Completion'
+      }
+      default: {
+        return type
+      }
+    }
+  }
+
+  onMounted(() => {
+    // Check if verification code is in URL query params (from QR code scan)
+    const codeParam = route.query.code as string
+    if (codeParam) {
+      verificationCode.value = codeParam
+      handleVerify()
+    }
+  })
 </script>
 
 <route lang="yaml">

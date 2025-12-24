@@ -1,10 +1,10 @@
 <template>
   <v-alert
-    :type="severity"
-    :variant="variant"
+    class="mb-4"
     :closable="closable"
     :prominent="prominent"
-    class="mb-4"
+    :type="severity"
+    :variant="variant"
     @click:close="$emit('close')"
   >
     <template v-if="title" #title>
@@ -47,8 +47,8 @@
 
       <v-btn
         v-if="action"
-        :color="actionColor"
         class="ml-2"
+        :color="actionColor"
         size="small"
         variant="tonal"
         @click="$emit('action')"
@@ -60,49 +60,49 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from "vue";
+  import { ref } from 'vue'
 
-export interface ErrorDisplayProps {
-  title?: string;
-  message?: string;
-  technical?: string;
-  severity?: "error" | "warning" | "info" | "success";
-  variant?: "tonal" | "outlined" | "flat" | "elevated";
-  retryable?: boolean;
-  action?: string;
-  actionColor?: string;
-  closable?: boolean;
-  prominent?: boolean;
-  showTechnical?: boolean;
-}
-
-withDefaults(defineProps<ErrorDisplayProps>(), {
-  severity: "error",
-  variant: "tonal",
-  retryable: false,
-  closable: true,
-  prominent: false,
-  showTechnical: false,
-  actionColor: "primary",
-});
-
-const emit = defineEmits<{
-  retry: [];
-  action: [];
-  close: [];
-}>();
-
-const retrying = ref(false);
-
-async function handleRetry() {
-  retrying.value = true;
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 500)); // Brief delay for UX
-    emit("retry");
-  } finally {
-    retrying.value = false;
+  export interface ErrorDisplayProps {
+    title?: string
+    message?: string
+    technical?: string
+    severity?: 'error' | 'warning' | 'info' | 'success'
+    variant?: 'tonal' | 'outlined' | 'flat' | 'elevated'
+    retryable?: boolean
+    action?: string
+    actionColor?: string
+    closable?: boolean
+    prominent?: boolean
+    showTechnical?: boolean
   }
-}
+
+  withDefaults(defineProps<ErrorDisplayProps>(), {
+    severity: 'error',
+    variant: 'tonal',
+    retryable: false,
+    closable: true,
+    prominent: false,
+    showTechnical: false,
+    actionColor: 'primary',
+  })
+
+  const emit = defineEmits<{
+    retry: []
+    action: []
+    close: []
+  }>()
+
+  const retrying = ref(false)
+
+  async function handleRetry () {
+    retrying.value = true
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)) // Brief delay for UX
+      emit('retry')
+    } finally {
+      retrying.value = false
+    }
+  }
 </script>
 
 <style scoped>

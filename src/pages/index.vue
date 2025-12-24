@@ -13,41 +13,45 @@ status * - Unauthenticated → /login * - Authenticated → Role-specific dashbo
 </template>
 
 <script lang="ts" setup>
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/auth";
+  import { onMounted } from 'vue'
+  import { useRouter } from 'vue-router'
+  import { useAuthStore } from '@/stores/auth'
 
-const router = useRouter();
-const authStore = useAuthStore();
+  const router = useRouter()
+  const authStore = useAuthStore()
 
-onMounted(async () => {
-  // Initialize auth store if needed
-  if (!authStore.initialized) {
-    await authStore.initialize();
-  }
+  onMounted(async () => {
+    // Initialize auth store if needed
+    if (!authStore.initialized) {
+      await authStore.initialize()
+    }
 
-  // Check authentication status
-  if (!authStore.isAuthenticated) {
-    // Not authenticated → redirect to login
-    router.replace("/login");
-    return;
-  }
+    // Check authentication status
+    if (!authStore.isAuthenticated) {
+      // Not authenticated → redirect to login
+      router.replace('/login')
+      return
+    }
 
-  // Authenticated → redirect based on role
-  const role = authStore.userRole;
-  switch (role) {
-    case "admin":
-      router.replace("/admin");
-      break;
-    case "teacher":
-      router.replace("/teacher");
-      break;
-    case "student":
-      router.replace("/student");
-      break;
-    default:
-      // Role not recognized → redirect to login
-      router.replace("/login");
-  }
-});
+    // Authenticated → redirect based on role
+    const role = authStore.userRole
+    switch (role) {
+      case 'admin': {
+        router.replace('/admin')
+        break
+      }
+      case 'teacher': {
+        router.replace('/teacher')
+        break
+      }
+      case 'student': {
+        router.replace('/student')
+        break
+      }
+      default: {
+        // Role not recognized → redirect to login
+        router.replace('/login')
+      }
+    }
+  })
 </script>
