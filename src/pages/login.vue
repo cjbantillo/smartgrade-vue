@@ -114,7 +114,7 @@ meta:
         <!-- Test Credentials (Development Only) -->
         <v-card v-if="isDevelopment" class="mt-4" variant="outlined">
           <v-card-text class="text-caption">
-            <strong>Development Mode</strong><br>
+            <strong>Development Mode</strong><br />
             This section will be removed in production
           </v-card-text>
         </v-card>
@@ -124,88 +124,88 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { computed, ref } from 'vue'
-  import { useRouter } from 'vue-router'
-  import { useAuth, validateDepEdEmail } from '@/composables/useAuth'
-  import { supabase } from '@/services/supabase'
-  import { useAuthStore } from '@/stores/auth'
+import { computed, ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuth, validateDepEdEmail } from "@/composables/useAuth";
+import { supabase } from "@/services/supabase";
+import { useAuthStore } from "@/stores/auth";
 
-  const router = useRouter()
-  const authStore = useAuthStore()
-  const { login, loading: authLoading } = useAuth()
+const router = useRouter();
+const authStore = useAuthStore();
+const { login, loading: authLoading } = useAuth();
 
-  // Form state
-  const formRef = ref()
-  const email = ref('')
-  const password = ref('')
-  const showPassword = ref(false)
-  const errorMessage = ref('')
-  const emailErrors = ref<string[]>([])
+// Form state
+const formRef = ref();
+const email = ref("");
+const password = ref("");
+const showPassword = ref(false);
+const errorMessage = ref("");
+const emailErrors = ref<string[]>([]);
 
-  // Loading state
-  const isLoading = computed(() => authLoading.value)
+// Loading state
+const isLoading = computed(() => authLoading.value);
 
-  // Development mode check
-  const isDevelopment = import.meta.env.DEV
+// Development mode check
+const isDevelopment = import.meta.env.DEV;
 
-  // Validation rules
-  const emailRules = [
-    (v: string) => !!v || 'Email is required',
-    (v: string) => {
-      const validation = validateDepEdEmail(v)
-      return validation.valid || validation.error || 'Invalid email'
-    },
-  ]
+// Validation rules
+const emailRules = [
+  (v: string) => !!v || "Email is required",
+  (v: string) => {
+    const validation = validateDepEdEmail(v);
+    return validation.valid || validation.error || "Invalid email";
+  },
+];
 
-  const passwordRules = [
-    (v: string) => !!v || 'Password is required',
-    (v: string) => v.length >= 6 || 'Password must be at least 6 characters',
-  ]
+const passwordRules = [
+  (v: string) => !!v || "Password is required",
+  (v: string) => v.length >= 6 || "Password must be at least 6 characters",
+];
 
-  /**
-   * Validate email on blur
-   */
-  function validateEmail () {
-    emailErrors.value = []
-    if (!email.value) return
+/**
+ * Validate email on blur
+ */
+function validateEmail() {
+  emailErrors.value = [];
+  if (!email.value) return;
 
-    const validation = validateDepEdEmail(email.value)
-    if (!validation.valid && validation.error) {
-      emailErrors.value = [validation.error]
-    }
+  const validation = validateDepEdEmail(email.value);
+  if (!validation.valid && validation.error) {
+    emailErrors.value = [validation.error];
   }
+}
 
-  /**
-   * Handle login submission
-   */
-  async function handleLogin () {
-    errorMessage.value = ''
-    emailErrors.value = []
+/**
+ * Handle login submission
+ */
+async function handleLogin() {
+  errorMessage.value = "";
+  emailErrors.value = [];
 
-    // Validate form
-    const { valid } = await formRef.value.validate()
-    if (!valid) return
+  // Validate form
+  const { valid } = await formRef.value.validate();
+  if (!valid) return;
 
-    // Attempt login
-    const result = await login({
-      email: email.value,
-      password: password.value,
-    })
+  // Attempt login
+  const result = await login({
+    email: email.value,
+    password: password.value,
+  });
 
-    if (result.success && result.user) {
-      // Get current session for store
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+  if (result.success && result.user) {
+    // Get current session for store
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-      if (session) {
-        authStore.setUser(result.user, session)
-      }
-
-      // Redirect to home (router will handle role-based redirect in Phase 4)
-      router.push('/')
-    } else {
-      errorMessage.value = result.error || 'Login failed'
+    if (session) {
+      authStore.setUser(result.user, session);
     }
+
+    // Redirect to home (router will handle role-based redirect in Phase 4)
+    router.push("/");
+  } else {
+    errorMessage.value = result.error || "Login failed";
   }
+}
 </script>
