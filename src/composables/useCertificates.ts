@@ -1,6 +1,12 @@
 import { ref } from "vue";
 import { supabase } from "@/services/supabase";
 import { useAuth } from "./useAuth";
+import html2pdf from "html2pdf.js";
+import {
+  handleError,
+  ErrorType,
+  type ErrorResponse,
+} from "@/utils/errorHandling";
 
 // Certificate Types
 export type CertificateType = "honors" | "good_moral" | "completion";
@@ -50,7 +56,7 @@ export interface CertificateVerification {
 export function useCertificates() {
   const authStore = useAuth();
   const loading = ref(false);
-  const error = ref<string | null>(null);
+  const error = ref<ErrorResponse | null>(null);
 
   /**
    * Check if grades are finalized before certificate generation
@@ -133,12 +139,13 @@ export function useCertificates() {
   }
 
   /**
-   * Generate certificate for a student
+   * Generate certificate for a student (with PDF generation)
    */
   async function generateCertificate(
     studentId: string,
     schoolYearId: string,
-    certificateType: CertificateType
+    certificateType: CertificateType,
+    htmlElement?: HTMLElement
   ): Promise<Certificate | null> {
     loading.value = true;
     error.value = null;
@@ -147,9 +154,16 @@ export function useCertificates() {
       // Check if grades are finalized
       const isFinalized = await checkFinalization(studentId, schoolYearId);
       if (!isFinalized) {
-        error.value =
-          "Cannot generate certificate: Grades must be finalized first";
-        return null;
+        error.value = {
+          message: "Grades must be finalized before generating certificates",
+          severity: "error" as const,
+          action: "none" as const,
+          technical: "is_finalized = false",
+          retryable: false,
+        };
+        throw new Error(
+          "Cannot generate certificate: Grades must be finalized first"
+        );
       }
 
       // Get GPA and honors
@@ -157,9 +171,16 @@ export function useCertificates() {
 
       // For honors certificate, check if student qualifies
       if (certificateType === "honors" && !honors) {
-        error.value =
-          "Student does not qualify for honors certificate (GPA must be 90 or above)";
-        return null;
+        error.value = {
+          message: "Student does not meet the GPA requirement for honors",
+          severity: "error" as const,
+          action: "none" as const,
+          technical: `GPA: ${gpa}, Required: >= 90`,
+          retryable: false,
+        };
+        throw new Error(
+          "Student does not qualify for honors certificate (GPA must be 90 or above)"
+        );
       }
 
       // Get school year code for verification code
@@ -184,8 +205,56 @@ export function useCertificates() {
         .single();
 
       if (existingCert) {
-        error.value = "Certificate already exists for this student and type";
-        return null;
+        error.value = {
+          message: "A certificate of this type already exists for this student",
+          severity: "error" as const,
+          action: "none" as const,
+          technical: `Certificate ID: ${existingCert.id}`,
+          retryable: false,
+        };
+        throw new Error("Certificate already exists for this student and type");
+      }
+
+      // Generate PDF if htmlElement provided
+      let pdfUrl: string | null = null;
+      if (htmlElement) {
+        try {
+          const pdfBlob = await html2pdf()
+            .set({
+              margin: 10,
+              filename: `certificate-${certificateType}-${studentId}.pdf`,
+              image: { type: "jpeg", quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true },
+              jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+            })
+            .from(htmlElement)
+            .outputPdf("blob");
+
+          // Upload to Supabase Storage
+          const fileName = `${studentId}/${schoolYearId}/${certificateType}_${Date.now()}.pdf`;
+          const { data: uploadData, error: uploadError } =
+            await supabase.storage
+              .from("certificates")
+              .upload(fileName, pdfBlob, {
+                contentType: "application/pdf",
+                cacheControl: "3600",
+                upsert: false,
+              });
+
+          if (uploadError) {
+            throw uploadError;
+          }
+
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from("certificates")
+            .getPublicUrl(uploadData.path);
+
+          pdfUrl = urlData.publicUrl;
+        } catch (pdfError) {
+          console.error("PDF generation error:", pdfError);
+          // Continue without PDF if generation fails
+        }
       }
 
       // Generate verification code
@@ -200,15 +269,16 @@ export function useCertificates() {
           school_year_id: schoolYearId,
           issued_date: new Date().toISOString().split("T")[0],
           generated_by: authStore.user?.id,
-          qr_code_url: verificationCode, // Store verification code in qr_code_url field
+          qr_code_url: verificationCode,
+          pdf_url: pdfUrl,
         })
         .select()
         .single();
 
       if (insertError) {
-        console.error("Certificate creation error:", insertError);
-        error.value = "Failed to generate certificate";
-        return null;
+        const errResponse = handleError(insertError, "creating certificate");
+        error.value = errResponse;
+        throw insertError;
       }
 
       // Log to audit logs
@@ -224,9 +294,9 @@ export function useCertificates() {
 
       return certificate;
     } catch (err) {
-      console.error("Unexpected error generating certificate:", err);
-      error.value = "An unexpected error occurred";
-      return null;
+      const errorResponse = handleError(err, "generating certificate");
+      error.value = errorResponse;
+      throw err;
     } finally {
       loading.value = false;
     }
@@ -274,7 +344,7 @@ export function useCertificates() {
 
       if (fetchError) {
         console.error("Fetch certificates error:", fetchError);
-        error.value = "Failed to fetch certificates";
+        error.value = handleError(fetchError, "fetching certificates");
         return [];
       }
 
@@ -296,7 +366,7 @@ export function useCertificates() {
       return enrichedCertificates;
     } catch (err) {
       console.error("Unexpected error fetching certificates:", err);
-      error.value = "An unexpected error occurred";
+      error.value = handleError(err, "fetching certificates");
       return [];
     } finally {
       loading.value = false;
@@ -405,7 +475,7 @@ export function useCertificates() {
 
       if (updateError) {
         console.error("Certificate revocation error:", updateError);
-        error.value = "Failed to revoke certificate";
+        error.value = handleError(updateError, "revoking certificate");
         return false;
       }
 
@@ -423,7 +493,7 @@ export function useCertificates() {
       return true;
     } catch (err) {
       console.error("Unexpected error revoking certificate:", err);
-      error.value = "An unexpected error occurred";
+      error.value = handleError(err, "revoking certificate");
       return false;
     } finally {
       loading.value = false;

@@ -1,6 +1,8 @@
 import { ref } from "vue";
 import { supabase } from "@/services/supabase";
 import { useAuthStore } from "@/stores/auth";
+import html2pdf from "html2pdf.js";
+import { handleError, type ErrorResponse } from "@/utils/errorHandling";
 
 export interface SF9Data {
   // Student Information
@@ -96,7 +98,8 @@ export interface DocumentEdit {
 export function useDocuments() {
   const authStore = useAuthStore();
   const loading = ref(false);
-  const error = ref<string | null>(null);
+  const error = ref<ErrorResponse | null>(null);
+  const isEditing = ref(false);
 
   /**
    * Check if grades are finalized (required before document generation)
@@ -280,8 +283,8 @@ export function useDocuments() {
         remarks: generalAverage && generalAverage >= 75 ? "PASSED" : "FAILED",
       };
     } catch (err) {
-      error.value =
-        err instanceof Error ? err.message : "Failed to generate SF9";
+      const errorResponse = handleError(err, "generating SF9");
+      error.value = errorResponse;
       console.error("Error generating SF9:", err);
       return null;
     } finally {
@@ -435,8 +438,8 @@ export function useDocuments() {
         school_years: schoolYearData,
       };
     } catch (err) {
-      error.value =
-        err instanceof Error ? err.message : "Failed to generate SF10";
+      const errorResponse = handleApiError(err, "generating SF10");
+      error.value = errorResponse;
       console.error("Error generating SF10:", err);
       return null;
     } finally {
@@ -506,13 +509,80 @@ export function useDocuments() {
     return data || [];
   }
 
+  /**
+   * Generate PDF from HTML element and upload to Supabase Storage
+   */
+  async function generatePDF(
+    htmlElement: HTMLElement,
+    documentType: "SF9" | "SF10",
+    studentId: string,
+    schoolYearId?: string
+  ): Promise<string> {
+    try {
+      // Generate PDF blob
+      const pdfBlob = await html2pdf()
+        .set({
+          margin: 10,
+          filename: `${documentType}-${studentId}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: "mm", format: "legal", orientation: "portrait" },
+        })
+        .from(htmlElement)
+        .outputPdf("blob");
+
+      // Upload to Supabase Storage
+      const fileName = schoolYearId
+        ? `${studentId}/${schoolYearId}/${documentType}_${Date.now()}.pdf`
+        : `${studentId}/${documentType}_${Date.now()}.pdf`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(fileName, pdfBlob, {
+          contentType: "application/pdf",
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from("documents")
+        .getPublicUrl(uploadData.path);
+
+      // Log to audit_logs
+      if (authStore.user) {
+        await supabase.from("audit_logs").insert({
+          user_id: authStore.user.id,
+          action: `${documentType.toLowerCase()}_pdf_generated`,
+          entity_type: documentType,
+          entity_id: studentId,
+          details: `Generated ${documentType} PDF for student ${studentId}`,
+          ip_address: "system",
+          user_agent: "SmartGrade System",
+        });
+      }
+
+      return urlData.publicUrl;
+    } catch (err) {
+      const errorResponse = handleError(err, `generating ${documentType} PDF`);
+      error.value = errorResponse;
+      throw err;
+    }
+  }
+
   return {
     loading,
     error,
+    isEditing,
     checkFinalization,
     generateSF9,
     generateSF10,
     logDocumentEdit,
     fetchDocumentEdits,
+    generatePDF,
   };
 }
