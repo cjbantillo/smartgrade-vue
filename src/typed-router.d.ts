@@ -24,6 +24,7 @@ declare module 'vue-router/auto-routes' {
     '/admin/classes': RouteRecordInfo<'/admin/classes', '/admin/classes', Record<never, never>, Record<never, never>>,
     '/admin/school-years': RouteRecordInfo<'/admin/school-years', '/admin/school-years', Record<never, never>, Record<never, never>>,
     '/admin/settings': RouteRecordInfo<'/admin/settings', '/admin/settings', Record<never, never>, Record<never, never>>,
+    '/admin/students': RouteRecordInfo<'/admin/students', '/admin/students', Record<never, never>, Record<never, never>>,
     '/admin/subjects': RouteRecordInfo<'/admin/subjects', '/admin/subjects', Record<never, never>, Record<never, never>>,
     '/admin/teachers': RouteRecordInfo<'/admin/teachers', '/admin/teachers', Record<never, never>, Record<never, never>>,
     '/admin/unlock-requests': RouteRecordInfo<'/admin/unlock-requests', '/admin/unlock-requests', Record<never, never>, Record<never, never>>,
@@ -81,6 +82,10 @@ declare module 'vue-router/auto-routes' {
     }
     'src/pages/admin/settings.vue': {
       routes: '/admin/settings'
+      views: never
+    }
+    'src/pages/admin/students.vue': {
+      routes: '/admin/students'
       views: never
     }
     'src/pages/admin/subjects.vue': {

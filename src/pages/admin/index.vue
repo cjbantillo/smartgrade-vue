@@ -89,15 +89,57 @@ meta:
       </v-col>
     </v-row>
 
+    <!-- Quick Actions -->
+    <v-row class="mb-6">
+      <v-col cols="12">
+        <v-card>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2">mdi-flash</v-icon>
+            Quick Actions
+          </v-card-title>
+          <v-card-text>
+            <v-list>
+              <v-list-item
+                prepend-icon="mdi-calendar-range"
+                title="Manage School Years"
+                subtitle="Set active year and grading periods"
+                to="/admin/school-years"
+              />
+              <v-divider />
+              <v-list-item
+                prepend-icon="mdi-account-group"
+                title="Manage Users"
+                subtitle="Add, edit, or remove user accounts"
+                to="/admin/students"
+              />
+              <v-divider />
+              <v-list-item
+                prepend-icon="mdi-book-open-variant"
+                title="Manage Subjects"
+                subtitle="Configure subject offerings"
+                to="/admin/subjects"
+              />
+              <v-divider />
+              <v-list-item
+                prepend-icon="mdi-history"
+                title="View Audit Logs"
+                subtitle="Monitor system activity"
+                to="/admin/audit-logs"
+              />
+            </v-list>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Main Admin Actions -->
     <v-row>
       <v-col cols="12" md="6">
         <v-card>
           <v-card-title class="d-flex align-center">
-            <v-icon
-              class="mr-2"
-              color="primary"
-            >mdi-account-multiple-check</v-icon>
+            <v-icon class="mr-2" color="primary"
+              >mdi-account-multiple-check</v-icon
+            >
             Teacher Approvals
           </v-card-title>
           <v-card-text>
@@ -188,6 +230,64 @@ meta:
       </v-col>
     </v-row>
 
+    <!-- Recent Activity Timeline -->
+    <v-row class="mt-6">
+      <v-col cols="12">
+        <v-card>
+          <v-card-title class="d-flex align-center">
+            <v-icon class="mr-2" color="primary">mdi-timeline-clock</v-icon>
+            Recent System Activity
+          </v-card-title>
+          <v-card-text>
+            <v-timeline align="start" density="compact" side="end">
+              <v-timeline-item
+                v-for="activity in recentActivities"
+                :key="activity.id"
+                :dot-color="activity.color"
+                size="small"
+              >
+                <template #icon>
+                  <v-icon size="small">{{ activity.icon }}</v-icon>
+                </template>
+                <div class="d-flex justify-space-between">
+                  <div>
+                    <div class="font-weight-medium">{{ activity.action }}</div>
+                    <div class="text-caption text-medium-emphasis">
+                      {{ activity.user }} • {{ activity.table }}
+                    </div>
+                  </div>
+                  <div class="text-caption text-medium-emphasis">
+                    {{ formatTime(activity.timestamp) }}
+                  </div>
+                </div>
+              </v-timeline-item>
+            </v-timeline>
+
+            <v-btn
+              v-if="recentActivities.length === 0"
+              block
+              color="grey"
+              disabled
+              variant="text"
+            >
+              No recent activity
+            </v-btn>
+
+            <v-btn
+              v-else
+              block
+              color="primary"
+              to="/admin/audit-logs"
+              variant="text"
+              class="mt-4"
+            >
+              View All Activities
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- Important Notices -->
     <v-row class="mt-6">
       <v-col>
@@ -198,8 +298,10 @@ meta:
           </v-alert-title>
           <div class="text-body-2">
             <p class="mb-1">
-              <strong>Admins serve as system overseers, not primary
-                operators.</strong>
+              <strong
+                >Admins serve as system overseers, not primary
+                operators.</strong
+              >
             </p>
             <ul class="ml-4">
               <li>
@@ -216,41 +318,97 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { onMounted, ref } from 'vue'
-  import { supabase } from '@/services/supabase'
+import { onMounted, ref } from "vue";
+import { supabase } from "@/services/supabase";
 
-  const pendingTeachers = ref(0)
-  const approvedTeachers = ref(0)
-  const recentAuditCount = ref(0)
+const pendingTeachers = ref(0);
+const approvedTeachers = ref(0);
+const recentAuditCount = ref(0);
+const recentActivities = ref<any[]>([]);
 
-  onMounted(async () => {
-    // Fetch pending teachers count
-    const { count: pending } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'teacher')
-      .eq('is_approved', false)
+// Format timestamp to relative time
+function formatTime(timestamp: string) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
 
-    pendingTeachers.value = pending || 0
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+}
 
-    // Fetch approved teachers count
-    const { count: approved } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('role', 'teacher')
-      .eq('is_approved', true)
+// Get icon based on action type
+function getActivityIcon(action: string): string {
+  if (action.includes("create") || action.includes("add"))
+    return "mdi-plus-circle";
+  if (action.includes("update") || action.includes("edit")) return "mdi-pencil";
+  if (action.includes("delete")) return "mdi-delete";
+  if (action.includes("approve")) return "mdi-check-circle";
+  if (action.includes("unlock")) return "mdi-lock-open";
+  return "mdi-information";
+}
 
-    approvedTeachers.value = approved || 0
+// Get color based on action type
+function getActivityColor(action: string): string {
+  if (action.includes("create") || action.includes("add")) return "success";
+  if (action.includes("update") || action.includes("edit")) return "primary";
+  if (action.includes("delete")) return "error";
+  if (action.includes("approve")) return "success";
+  if (action.includes("unlock")) return "warning";
+  return "info";
+}
 
-    // Fetch recent audit logs count (last 7 days)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+onMounted(async () => {
+  // Fetch pending teachers count
+  const { count: pending } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "teacher")
+    .eq("is_approved", false);
 
-    const { count: auditCount } = await supabase
-      .from('audit_logs')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', sevenDaysAgo.toISOString())
+  pendingTeachers.value = pending || 0;
 
-    recentAuditCount.value = auditCount || 0
-  })
+  // Fetch approved teachers count
+  const { count: approved } = await supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .eq("role", "teacher")
+    .eq("is_approved", true);
+
+  approvedTeachers.value = approved || 0;
+
+  // Fetch recent audit logs count (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  const { count: auditCount } = await supabase
+    .from("audit_logs")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  recentAuditCount.value = auditCount || 0;
+
+  // Fetch recent activities for timeline (last 10 activities)
+  const { data: activities } = await supabase
+    .from("audit_logs")
+    .select("id, action, table_name, user_id, created_at, profiles(email)")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  if (activities) {
+    recentActivities.value = activities.map((activity: any) => ({
+      id: activity.id,
+      action: activity.action,
+      table: activity.table_name,
+      user: activity.profiles?.email || "System",
+      timestamp: activity.created_at,
+      icon: getActivityIcon(activity.action),
+      color: getActivityColor(activity.action),
+    }));
+  }
+});
 </script>

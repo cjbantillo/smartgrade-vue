@@ -595,6 +595,99 @@ export function useAdmin() {
     }
   }
 
+  /**
+   * Delete a teacher record
+   * Prevent deletion if teacher has assigned classes unless force=true
+   */
+  async function deleteTeacher(
+    teacherId: string,
+    force = false,
+    adminId?: string
+  ): Promise<{ success: boolean; message?: string }> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      // Check for any classes assigned to this teacher
+      const { data: classesAssigned, error: classCheckError } = await supabase
+        .from("classes")
+        .select("id")
+        .eq("teacher_id", teacherId)
+        .limit(1);
+
+      if (classCheckError) {
+        console.error(
+          "[Admin] Error checking teacher classes:",
+          classCheckError
+        );
+        return {
+          success: false,
+          message: "Failed to check teacher assignments",
+        };
+      }
+
+      if (classesAssigned && classesAssigned.length > 0 && !force) {
+        return {
+          success: false,
+          message:
+            "Teacher is assigned as adviser to one or more classes. Unassign before deleting or use force.",
+        };
+      }
+
+      // Delete teacher record from teachers table
+      const { error: deleteError } = await supabase
+        .from("teachers")
+        .delete()
+        .eq("id", teacherId);
+
+      if (deleteError) {
+        console.error("[Admin] Delete teacher error:", deleteError);
+        return { success: false, message: "Failed to delete teacher record" };
+      }
+
+      // Optionally, also deactivate linked profile (if adminId provided)
+      if (adminId) {
+        // find profile user_id for this teacher (join via teachers.user_id)
+        const { data: t } = await supabase
+          .from("teachers")
+          .select("user_id")
+          .eq("id", teacherId)
+          .single();
+
+        if ((t as any)?.user_id) {
+          await supabase
+            .from("profiles")
+            .update({ is_active: false })
+            .eq("user_id", (t as any).user_id);
+        }
+      }
+
+      // Log to audit
+      if (adminId) {
+        const { error: auditError } = await supabase.from("audit_logs").insert({
+          user_id: adminId,
+          action: "teacher_deleted",
+          entity_type: "Teacher",
+          entity_id: teacherId,
+          metadata: { force_deleted: force },
+        });
+
+        if (auditError) {
+          console.error("[Admin] Audit log error (deleteTeacher):", auditError);
+        }
+      }
+
+      return { success: true };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = message;
+      console.error("[Admin] Exception:", err);
+      return { success: false, message };
+    } finally {
+      loading.value = false;
+    }
+  }
+
   return {
     loading,
     error,
@@ -609,5 +702,6 @@ export function useAdmin() {
     fetchTeacherInvites,
     fetchAuditLogs,
     getAuditLogDetails,
+    deleteTeacher,
   };
 }

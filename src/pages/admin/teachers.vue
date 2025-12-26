@@ -182,6 +182,14 @@ meta:
                   icon="mdi-account-off"
                   @click="handleDeactivate(item)"
                 />
+                <v-btn
+                  color="error"
+                  size="small"
+                  variant="tonal"
+                  icon="mdi-delete"
+                  title="Delete teacher"
+                  @click="openDeleteDialog(item)"
+                />
               </template>
             </v-data-table>
           </v-card-text>
@@ -235,6 +243,33 @@ meta:
           >
             Save
           </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="deleteDialog" max-width="500">
+      <v-card>
+        <v-card-title>Delete Teacher</v-card-title>
+        <v-card-text>
+          <p class="mb-4">
+            Are you sure you want to permanently delete
+            <strong
+              >{{ deleteTarget?.profiles?.first_name }}
+              {{ deleteTarget?.profiles?.last_name }}</strong
+            >?
+          </p>
+          <v-alert color="warning" variant="tonal">
+            Deleting a teacher will remove their record. If they are assigned as
+            an adviser to classes, deletion will be blocked unless forced.
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" :loading="deleting" @click="confirmDeleteTeacher"
+            >Delete</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -410,6 +445,7 @@ const {
   deactivateTeacher: deactivateTeacherApi,
   rejectTeacher: rejectTeacherApi,
   preRegisterTeacher: preRegisterTeacherApi,
+  deleteTeacher: deleteTeacherApi,
 } = useAdmin();
 
 const currentTab = ref("pending");
@@ -424,6 +460,9 @@ const rejectReason = ref("");
 const selectedTeacher = ref<any>(null);
 const editDialog = ref(false);
 const preRegisterDialog = ref(false);
+const deleteDialog = ref(false);
+const deleteTarget = ref<any>(null);
+const deleting = ref(false);
 const emailError = ref("");
 const editingTeacher = ref<any>(null);
 const teacherForm = ref({
@@ -643,6 +682,40 @@ function openRejectDialog(teacher: any) {
   selectedTeacher.value = teacher;
   rejectReason.value = "";
   rejectDialog.value = true;
+}
+
+function openDeleteDialog(teacher: any) {
+  deleteTarget.value = teacher;
+  deleteDialog.value = true;
+}
+
+async function confirmDeleteTeacher() {
+  if (!deleteTarget.value) return;
+  if (!authStore.profile?.user_id) {
+    showSnackbar("Admin user not found", "error");
+    return;
+  }
+
+  deleting.value = true;
+  try {
+    const res = await deleteTeacherApi(
+      deleteTarget.value.id,
+      false,
+      authStore.profile.user_id
+    );
+    if (res?.success) {
+      showSnackbar("Teacher deleted successfully", "success");
+      deleteDialog.value = false;
+      deleteTarget.value = null;
+      await loadTeachers();
+    } else {
+      showSnackbar(res?.message || "Failed to delete teacher", "error");
+    }
+  } catch (err: any) {
+    showSnackbar(err?.message || "Error deleting teacher", "error");
+  } finally {
+    deleting.value = false;
+  }
 }
 
 async function confirmRejectTeacher() {

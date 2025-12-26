@@ -72,6 +72,12 @@ const navigationItems: NavigationItem[] = [
     value: "users",
     children: [
       {
+        title: "Students",
+        icon: "mdi-account-school",
+        to: "/admin/students",
+        value: "students",
+      },
+      {
         title: "Teachers",
         icon: "mdi-account-tie",
         to: "/admin/teachers",
