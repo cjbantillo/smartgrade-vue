@@ -76,11 +76,11 @@ export function useTeacher() {
           created_at,
           updated_at,
           subjects:subject_id (
-            name,
-            code
+            subject_name,
+            subject_code
           ),
           school_years:school_year_id (
-            year
+            year_code
           )
         `
         )
@@ -95,12 +95,12 @@ export function useTeacher() {
       const classIds = data?.map((c) => c.id) || [];
       const { data: enrollments } = await supabase
         .from("class_enrollments")
-        .select("class_id")
-        .in("class_id", classIds);
+        .select("teacher_class_id")
+        .in("teacher_class_id", classIds);
 
       const studentCounts =
         enrollments?.reduce((acc, e) => {
-          acc[e.class_id] = (acc[e.class_id] || 0) + 1;
+          acc[e.teacher_class_id] = (acc[e.teacher_class_id] || 0) + 1;
           return acc;
         }, {} as Record<string, number>) || {};
 
@@ -113,9 +113,9 @@ export function useTeacher() {
         grading_period: c.grading_period,
         created_at: c.created_at,
         updated_at: c.updated_at,
-        subject_name: (c.subjects as any)?.name,
-        subject_code: (c.subjects as any)?.code,
-        school_year: (c.school_years as any)?.year,
+        subject_name: (c.subjects as any)?.subject_name,
+        subject_code: (c.subjects as any)?.subject_code,
+        school_year: (c.school_years as any)?.year_code,
         student_count: studentCounts[c.id] || 0,
       }));
     } catch (error_) {
@@ -182,11 +182,11 @@ export function useTeacher() {
           created_at,
           updated_at,
           subjects:subject_id (
-            name,
-            code
+            subject_name,
+            subject_code
           ),
           school_years:school_year_id (
-            year
+            year_code
           )
         `
         )
@@ -485,15 +485,157 @@ export function useTeacher() {
   async function fetchSubjects() {
     const { data, error: fetchError } = await supabase
       .from("subjects")
-      .select("id, code, name, track, strand")
-      .order("name");
+      .select("id, subject_code, subject_name, track, strand")
+      .order("subject_name");
 
     if (fetchError) {
       console.error("Error fetching subjects:", fetchError);
       return [];
     }
 
-    return data || [];
+    // Map to match UI expectations (name, code)
+    return (data || []).map((s) => ({
+      id: s.id,
+      name: s.subject_name,
+      code: s.subject_code,
+      track: s.track,
+      strand: s.strand,
+    }));
+  }
+
+  /**
+   * UPDATE: Modify class details
+   */
+  async function updateClass(
+    classId: string,
+    data: {
+      section?: string;
+      grading_period?: number;
+    }
+  ): Promise<TeacherClass | null> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      if (!authStore.profile?.user_id) {
+        throw new Error("Teacher profile not found");
+      }
+
+      const { data: updated, error: updateError } = await supabase
+        .from("class_assignments")
+        .update(data)
+        .eq("id", classId)
+        .eq("teacher_id", authStore.profile.user_id)
+        .select(
+          `
+          id,
+          teacher_id,
+          subject_id,
+          section,
+          school_year_id,
+          grading_period,
+          created_at,
+          updated_at,
+          subjects:subject_id (
+            name,
+            code
+          ),
+          school_years:school_year_id (
+            year
+          )
+        `
+        )
+        .single();
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Log audit trail
+      await supabase.from("audit_logs").insert({
+        user_id: authStore.profile?.user_id,
+        action: "class_updated",
+        table_name: "class_assignments",
+        record_id: classId,
+        new_values: data,
+      });
+
+      return {
+        id: updated.id,
+        teacher_id: updated.teacher_id,
+        subject_id: updated.subject_id,
+        section: updated.section,
+        school_year_id: updated.school_year_id,
+        grading_period: updated.grading_period,
+        created_at: updated.created_at,
+        updated_at: updated.updated_at,
+        subject_name: (updated.subjects as any)?.name,
+        subject_code: (updated.subjects as any)?.code,
+        school_year: (updated.school_years as any)?.year,
+        student_count: 0,
+      };
+    } catch (error_) {
+      error.value =
+        error_ instanceof Error ? error_.message : "Failed to update class";
+      console.error("Error updating class:", error_);
+      return null;
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * DELETE: Remove a class
+   */
+  async function deleteClass(classId: string): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      if (!authStore.profile?.user_id) {
+        throw new Error("Teacher profile not found");
+      }
+
+      // Check if class has enrolled students
+      const { data: enrollments } = await supabase
+        .from("class_enrollments")
+        .select("id")
+        .eq("class_id", classId)
+        .limit(1);
+
+      if (enrollments && enrollments.length > 0) {
+        throw new Error(
+          "Cannot delete class with enrolled students. Please remove all students first."
+        );
+      }
+
+      const { error: deleteError } = await supabase
+        .from("class_assignments")
+        .delete()
+        .eq("id", classId)
+        .eq("teacher_id", authStore.profile.user_id);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      // Log audit trail
+      await supabase.from("audit_logs").insert({
+        user_id: authStore.profile?.user_id,
+        action: "class_deleted",
+        table_name: "class_assignments",
+        record_id: classId,
+      });
+
+      return true;
+    } catch (error_) {
+      error.value =
+        error_ instanceof Error ? error_.message : "Failed to delete class";
+      console.error("Error deleting class:", error_);
+      return false;
+    } finally {
+      loading.value = false;
+    }
   }
 
   /**
@@ -502,15 +644,54 @@ export function useTeacher() {
   async function fetchSchoolYears() {
     const { data, error: fetchError } = await supabase
       .from("school_years")
-      .select("id, year, is_active")
-      .order("year", { ascending: false });
+      .select("id, year_code, is_active")
+      .order("year_code", { ascending: false });
 
     if (fetchError) {
       console.error("Error fetching school years:", fetchError);
       return [];
     }
 
-    return data || [];
+    // Map to match UI expectations (year field)
+    return (data || []).map((sy) => ({
+      id: sy.id,
+      year: sy.year_code,
+      is_active: sy.is_active,
+    }));
+  }
+
+  /**
+   * Get teacher's audit logs
+   */
+  async function fetchTeacherAuditLogs(limit: number = 50) {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      if (!authStore.profile?.user_id) {
+        throw new Error("Teacher profile not found");
+      }
+
+      const { data, error: fetchError } = await supabase
+        .from("audit_logs")
+        .select("*")
+        .eq("user_id", authStore.profile.user_id)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      return data || [];
+    } catch (error_) {
+      error.value =
+        error_ instanceof Error ? error_.message : "Failed to fetch audit logs";
+      console.error("Error fetching audit logs:", error_);
+      return [];
+    } finally {
+      loading.value = false;
+    }
   }
 
   return {
@@ -518,11 +699,14 @@ export function useTeacher() {
     error,
     fetchTeacherClasses,
     createClass,
+    updateClass,
+    deleteClass,
     fetchClassStudents,
     searchStudents,
     enrollStudent,
     unenrollStudent,
     fetchSubjects,
     fetchSchoolYears,
+    fetchTeacherAuditLogs,
   };
 }
