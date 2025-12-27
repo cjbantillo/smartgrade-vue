@@ -8,7 +8,7 @@
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  PAGE 1: AUDIT LOGS                    PAGE 2: UNLOCK REQUESTS
-│  ─────────────────────                 ────────────────────── 
+│  ─────────────────────                 ──────────────────────
 │  ✅ READ     (View all)                ✅ CREATE  (Auto by teachers)
 │  ✅ DELETE   (Individual)              ✅ READ    (Pending/All tabs)
 │  ✅ EXPORT   (CSV)                     ✅ UPDATE  (Approve/Reject)
@@ -322,7 +322,7 @@ WHERE id=$request_id;
 
 // 2. Unlock grades
 UPDATE grade_finalization_status
-SET is_finalized=false, last_unlocked_by=$admin_id, 
+SET is_finalized=false, last_unlocked_by=$admin_id,
     last_unlocked_at=NOW(), unlock_count=unlock_count+1
 WHERE student_id=$student_id AND school_year_id=$year_id;
 
@@ -385,33 +385,33 @@ with status "approved" or "rejected"
 
 ## 🎯 Feature Matrix
 
-| Feature | Audit Logs | Unlock Requests |
-|---------|:----------:|:---------------:|
-| **READ Operations** |
-| View all entries | ✅ | ✅ |
-| Filter by action/type | ✅ | ❌ |
-| Search/find | ✅ | ❌ |
-| Details viewer | ✅ | ✅ |
-| Pagination | ✅ | ❌ |
+| Feature               | Audit Logs |  Unlock Requests  |
+| --------------------- | :--------: | :---------------: |
+| **READ Operations**   |
+| View all entries      |     ✅     |        ✅         |
+| Filter by action/type |     ✅     |        ❌         |
+| Search/find           |     ✅     |        ❌         |
+| Details viewer        |     ✅     |        ✅         |
+| Pagination            |     ✅     |        ❌         |
 | **CREATE Operations** |
-| System automatic | ✅ | ❌ |
-| Teacher initiated | ❌ | ✅ |
-| Admin initiated | ❌ | ❌ |
+| System automatic      |     ✅     |        ❌         |
+| Teacher initiated     |     ❌     |        ✅         |
+| Admin initiated       |     ❌     |        ❌         |
 | **UPDATE Operations** |
-| Status change | ❌ | ✅ |
-| Grade unlock | ❌ | ✅ (via approve) |
-| Admin notes | ❌ | ✅ |
+| Status change         |     ❌     |        ✅         |
+| Grade unlock          |     ❌     | ✅ (via approve)  |
+| Admin notes           |     ❌     |        ✅         |
 | **DELETE Operations** |
-| Delete entries | ✅ | ✅ (pending only) |
-| Soft delete | ❌ | ❌ |
+| Delete entries        |     ✅     | ✅ (pending only) |
+| Soft delete           |     ❌     |        ❌         |
 | **EXPORT Operations** |
-| CSV export | ✅ | ✅ |
-| Filtered export | ✅ | ❌ |
-| **UI Features** |
-| Tabs | ❌ | ✅ |
-| Color coding | ✅ | ✅ |
-| Snackbars | ❌ | ✅ |
-| Confirmations | ✅ | ✅ |
+| CSV export            |     ✅     |        ✅         |
+| Filtered export       |     ✅     |        ❌         |
+| **UI Features**       |
+| Tabs                  |     ❌     |        ✅         |
+| Color coding          |     ✅     |        ✅         |
+| Snackbars             |     ❌     |        ✅         |
+| Confirmations         |     ✅     |        ✅         |
 
 ---
 
