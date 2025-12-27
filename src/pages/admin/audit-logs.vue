@@ -74,14 +74,23 @@ meta:
       <v-card-text>
         <div class="d-flex justify-space-between align-center mb-4">
           <div class="text-h6">Activity Logs ({{ filteredLogs.length }})</div>
-          <v-btn
-            color="primary"
-            :loading="loading"
-            prepend-icon="mdi-refresh"
-            @click="loadLogs"
-          >
-            Refresh
-          </v-btn>
+          <div class="d-flex gap-2">
+            <v-btn
+              color="primary"
+              :loading="loading"
+              prepend-icon="mdi-refresh"
+              @click="loadLogs"
+            >
+              Refresh
+            </v-btn>
+            <v-btn
+              prepend-icon="mdi-download"
+              @click="exportLogs"
+              :disabled="filteredLogs.length === 0"
+            >
+              Export CSV
+            </v-btn>
+          </div>
         </div>
 
         <v-alert v-if="loading" color="info" icon="mdi-loading" variant="tonal">
@@ -106,6 +115,7 @@ meta:
               <th>Entity</th>
               <th>Details</th>
               <th>IP Address</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -143,6 +153,15 @@ meta:
                 />
               </td>
               <td>{{ log.ip_address || "N/A" }}</td>
+              <td>
+                <v-btn
+                  icon="mdi-delete"
+                  size="x-small"
+                  variant="text"
+                  color="error"
+                  @click="openDeleteDialog(log)"
+                />
+              </td>
             </tr>
           </tbody>
         </v-table>
@@ -157,6 +176,26 @@ meta:
         </div>
       </v-card-text>
     </v-card>
+
+    <!-- Delete Confirmation Dialog -->
+    <v-dialog v-model="deleteDialog" max-width="400">
+      <v-card>
+        <v-card-title>Delete Audit Log</v-card-title>
+        <v-card-text>
+          <p>Are you sure you want to delete this audit log entry?</p>
+          <p class="text-caption text-medium-emphasis">
+            This action cannot be undone.
+          </p>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn color="error" @click="deleteLog" :loading="deleting">
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <!-- Details Dialog -->
     <v-dialog v-model="detailsDialog" max-width="600">
@@ -199,9 +238,11 @@ meta:
                 <v-icon>mdi-database</v-icon>
               </template>
               <v-list-item-title>Entity</v-list-item-title>
-              <v-list-item-subtitle>{{ selectedLog.entity_type }} ({{
-                selectedLog.entity_id
-              }})</v-list-item-subtitle>
+              <v-list-item-subtitle
+                >{{ selectedLog.entity_type }} ({{
+                  selectedLog.entity_id
+                }})</v-list-item-subtitle
+              >
             </v-list-item>
           </v-list>
 
@@ -263,138 +304,226 @@ meta:
 </template>
 
 <script lang="ts" setup>
-  import { computed, onMounted, ref } from 'vue'
-  import { supabase } from '@/services/supabase'
+import { computed, onMounted, ref } from "vue";
+import { supabase } from "@/services/supabase";
 
-  const loading = ref(false)
-  const logs = ref<any[]>([])
-  const currentPage = ref(1)
-  const itemsPerPage = 25
-  const detailsDialog = ref(false)
-  const selectedLog = ref<any>(null)
+const loading = ref(false);
+const logs = ref<any[]>([]);
+const currentPage = ref(1);
+const itemsPerPage = 25;
+const detailsDialog = ref(false);
+const selectedLog = ref<any>(null);
+const deleteDialog = ref(false);
+const logToDelete = ref<any>(null);
+const deleting = ref(false);
 
-  const filters = ref({
-    action: null as string | null,
-    entityType: null as string | null,
-    dateFrom: '',
-    dateTo: '',
-  })
+const filters = ref({
+  action: null as string | null,
+  entityType: null as string | null,
+  dateFrom: "",
+  dateTo: "",
+});
 
-  const actionTypes = [
-    { title: 'Teacher Approved', value: 'teacher_approved' },
-    { title: 'Teacher Rejected', value: 'teacher_rejected' },
-    { title: 'Grades Finalized', value: 'grades_finalized' },
-    { title: 'Grades Unlocked', value: 'grades_unlocked' },
-    { title: 'Grades Re-finalized', value: 'grades_refinalized' },
-  ]
+const actionTypes = [
+  { title: "Teacher Approved", value: "teacher_approved" },
+  { title: "Teacher Rejected", value: "teacher_rejected" },
+  { title: "Grades Finalized", value: "grades_finalized" },
+  { title: "Grades Unlocked", value: "grades_unlocked" },
+  { title: "Grades Re-finalized", value: "grades_refinalized" },
+];
 
-  const entityTypes = [
-    { title: 'Profile', value: 'profile' },
-    { title: 'Grade', value: 'grade' },
-    { title: 'Student', value: 'student' },
-    { title: 'Teacher', value: 'teacher' },
-  ]
+const entityTypes = [
+  { title: "Profile", value: "profile" },
+  { title: "Grade", value: "grade" },
+  { title: "Student", value: "student" },
+  { title: "Teacher", value: "teacher" },
+];
 
-  const filteredLogs = computed(() => {
-    let result = logs.value
+const filteredLogs = computed(() => {
+  let result = logs.value;
 
-    if (filters.value.action) {
-      result = result.filter(log => log.action === filters.value.action)
-    }
-
-    if (filters.value.entityType) {
-      result = result.filter(
-        log => log.entity_type === filters.value.entityType,
-      )
-    }
-
-    if (filters.value.dateFrom) {
-      const fromDate = new Date(filters.value.dateFrom)
-      result = result.filter(log => new Date(log.created_at) >= fromDate)
-    }
-
-    if (filters.value.dateTo) {
-      const toDate = new Date(filters.value.dateTo)
-      toDate.setHours(23, 59, 59)
-      result = result.filter(log => new Date(log.created_at) <= toDate)
-    }
-
-    return result
-  })
-
-  const totalPages = computed(() =>
-    Math.ceil(filteredLogs.value.length / itemsPerPage),
-  )
-
-  const paginatedLogs = computed(() => {
-    const start = (currentPage.value - 1) * itemsPerPage
-    const end = start + itemsPerPage
-    return filteredLogs.value.slice(start, end)
-  })
-
-  function formatDateTime (dateString: string) {
-    return new Date(dateString).toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
+  if (filters.value.action) {
+    result = result.filter((log) => log.action === filters.value.action);
   }
 
-  function formatAction (action: string) {
-    return action
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ')
+  if (filters.value.entityType) {
+    result = result.filter(
+      (log) => log.entity_type === filters.value.entityType
+    );
   }
 
-  function getActionColor (action: string) {
-    const colorMap: Record<string, string> = {
-      teacher_approved: 'success',
-      teacher_rejected: 'error',
-      grades_finalized: 'info',
-      grades_unlocked: 'warning',
-      grades_refinalized: 'primary',
-    }
-    return colorMap[action] || 'default'
+  if (filters.value.dateFrom) {
+    const fromDate = new Date(filters.value.dateFrom);
+    result = result.filter((log) => new Date(log.created_at) >= fromDate);
   }
 
-  function viewDetails (log: any) {
-    selectedLog.value = log
-    detailsDialog.value = true
+  if (filters.value.dateTo) {
+    const toDate = new Date(filters.value.dateTo);
+    toDate.setHours(23, 59, 59);
+    result = result.filter((log) => new Date(log.created_at) <= toDate);
   }
 
-  async function loadLogs () {
-    loading.value = true
+  return result;
+});
 
-    try {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select(
-          `
+const totalPages = computed(() =>
+  Math.ceil(filteredLogs.value.length / itemsPerPage)
+);
+
+const paginatedLogs = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredLogs.value.slice(start, end);
+});
+
+function formatDateTime(dateString: string) {
+  return new Date(dateString).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatAction(action: string) {
+  return action
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function getActionColor(action: string) {
+  const colorMap: Record<string, string> = {
+    teacher_approved: "success",
+    teacher_rejected: "error",
+    grades_finalized: "info",
+    grades_unlocked: "warning",
+    grades_refinalized: "primary",
+  };
+  return colorMap[action] || "default";
+}
+
+function viewDetails(log: any) {
+  selectedLog.value = log;
+  detailsDialog.value = true;
+}
+
+function openDeleteDialog(log: any) {
+  logToDelete.value = log;
+  deleteDialog.value = true;
+}
+
+async function deleteLog() {
+  if (!logToDelete.value) return;
+
+  deleting.value = true;
+
+  try {
+    const { error } = await supabase
+      .from("audit_logs")
+      .delete()
+      .eq("id", logToDelete.value.id);
+
+    if (error) throw error;
+
+    logs.value = logs.value.filter((log) => log.id !== logToDelete.value.id);
+    deleteDialog.value = false;
+    logToDelete.value = null;
+  } catch (error: any) {
+    console.error("Error deleting audit log:", error);
+  } finally {
+    deleting.value = false;
+  }
+}
+
+function exportLogs() {
+  if (filteredLogs.value.length === 0) return;
+
+  // Create CSV headers
+  const headers = [
+    "Timestamp",
+    "User Email",
+    "User Role",
+    "Action",
+    "Entity Type",
+    "Entity ID",
+    "IP Address",
+    "Old Values",
+    "New Values",
+    "Metadata",
+  ];
+
+  // Create CSV rows
+  const rows = filteredLogs.value.map((log) => [
+    formatDateTime(log.created_at),
+    log.user_email || "Unknown",
+    log.user_role || "",
+    formatAction(log.action),
+    log.entity_type,
+    log.entity_id,
+    log.ip_address || "N/A",
+    log.old_values ? JSON.stringify(log.old_values) : "",
+    log.new_values ? JSON.stringify(log.new_values) : "",
+    log.metadata ? JSON.stringify(log.metadata) : "",
+  ]);
+
+  // Create CSV content
+  const csvContent = [
+    headers.join(","),
+    ...rows.map((row) =>
+      row
+        .map((cell) =>
+          typeof cell === "string" && cell.includes(",")
+            ? `"${cell.replace(/"/g, '""')}"`
+            : cell
+        )
+        .join(",")
+    ),
+  ].join("\n");
+
+  // Download CSV
+  const blob = new Blob([csvContent], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `audit-logs-${new Date().toISOString().split("T")[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+async function loadLogs() {
+  loading.value = true;
+
+  try {
+    const { data, error } = await supabase
+      .from("audit_logs")
+      .select(
+        `
         *,
         user:profiles!audit_logs_user_id_fkey(email, role)
-      `,
-        )
-        .order('created_at', { ascending: false })
-        .limit(500)
+      `
+      )
+      .order("created_at", { ascending: false })
+      .limit(500);
 
-      if (error) throw error
+    if (error) throw error;
 
-      logs.value = (data || []).map((log: any) => ({
-        ...log,
-        user_email: log.user?.email || 'Unknown',
-        user_role: log.user?.role || '',
-      }))
-    } catch (error: any) {
-      console.error('Error loading audit logs:', error)
-    } finally {
-      loading.value = false
-    }
+    logs.value = (data || []).map((log: any) => ({
+      ...log,
+      user_email: log.user?.email || "Unknown",
+      user_role: log.user?.role || "",
+    }));
+  } catch (error: any) {
+    console.error("Error loading audit logs:", error);
+  } finally {
+    loading.value = false;
   }
+}
 
-  onMounted(() => {
-    loadLogs()
-  })
+onMounted(() => {
+  loadLogs();
+});
 </script>
