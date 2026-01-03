@@ -1,138 +1,131 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { supabase } from "@/lib/supabase";
-import type { User, Session } from "@supabase/supabase-js";
 
-export type UserRole = "admin" | "adviser" | "teacher" | "student";
+type UserRole = "admin" | "teacher" | "adviser" | "student" | null;
 
 export interface UserProfile {
-  id: string;
+  user_id: number;
   email: string;
-  role: UserRole;
-  school_id: number | null;
-  first_name: string;
-  last_name: string;
+  role: string;
+  school_id: number;
+  is_active: boolean;
 }
 
 export const useAuthStore = defineStore("auth", () => {
-  const user = ref<User | null>(null);
-  const session = ref<Session | null>(null);
   const profile = ref<UserProfile | null>(null);
-  const loading = ref(true);
-  const error = ref<string | null>(null);
+  const loading = ref(false);
+  const initialized = ref(false);
 
-  const isAuthenticated = computed(() => !!user.value);
-  const role = computed(() => profile.value?.role ?? null);
-  const fullName = computed(() =>
-    profile.value
-      ? `${profile.value.first_name} ${profile.value.last_name}`
-      : ""
-  );
+  const isAuthenticated = computed(() => !!profile.value);
 
-  async function fetchProfile(userId: string) {
-    const { data, error: err } = await supabase
-      .from("users")
-      .select("id, email, role, school_id, first_name, last_name")
-      .eq("id", userId)
-      .single();
+  const role = computed<UserRole>(() => {
+    if (!profile.value) return null;
+    const r = profile.value.role.toLowerCase();
+    if (r === "admin") return "admin";
+    if (r === "teacher") return "teacher";
+    if (r === "adviser") return "adviser";
+    if (r === "student") return "student";
+    return null;
+  });
 
-    if (err) {
-      console.error("Profile fetch error:", err);
-      return null;
-    }
-    return data as UserProfile;
-  }
+  const fullName = computed(() => profile.value?.email || "");
+  const user = computed(() => profile.value);
 
   async function initialize() {
+    if (initialized.value) return;
     loading.value = true;
-    try {
-      const { data, error: err } = await supabase.auth.getSession();
-      if (err) throw err;
 
-      session.value = data.session;
-      user.value = data.session?.user ?? null;
-
-      if (user.value) {
-        profile.value = await fetchProfile(user.value.id);
+    const savedUser = localStorage.getItem("smartgrade_user");
+    if (savedUser) {
+      try {
+        profile.value = JSON.parse(savedUser);
+      } catch {
+        localStorage.removeItem("smartgrade_user");
       }
-    } catch (err: unknown) {
-      error.value = err instanceof Error ? err.message : "Unknown error";
-    } finally {
-      loading.value = false;
     }
 
-    // Listen for auth changes
-    supabase.auth.onAuthStateChange(
-      async (_event: string, newSession: typeof session.value) => {
-        session.value = newSession;
-        user.value = newSession?.user ?? null;
-
-        if (user.value) {
-          profile.value = await fetchProfile(user.value.id);
-        } else {
-          profile.value = null;
-        }
-      }
-    );
+    initialized.value = true;
+    loading.value = false;
   }
 
   async function signInWithEmail(email: string, password: string) {
     loading.value = true;
-    error.value = null;
+
     try {
-      const { data, error: err } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (err) throw err;
+      const { data: userData, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email.toLowerCase().trim())
+        .eq("is_active", true)
+        .single();
 
-      user.value = data.user;
-      session.value = data.session;
-
-      if (user.value) {
-        profile.value = await fetchProfile(user.value.id);
+      if (error || !userData) {
+        loading.value = false;
+        return { success: false, error: "Invalid login credentials" };
       }
 
-      return { success: true };
-    } catch (err: any) {
-      error.value = err.message;
-      return { success: false, error: err.message };
-    } finally {
+      // Simple password verification for demo
+      const validPasswords: Record<string, string> = {
+        admin123:
+          "$2a$10$N9qo8uLOickgx2ZMRZoMye1e5HG8X5h7kJBZN3g1lJ.k8QOvZ7rCi",
+        teacher123:
+          "$2a$10$YQ8DGrT8tKNpqIwvCy3kZeGzVb5sY9nGxGvYkH5XvQ1hLY8fSdZbO",
+        password:
+          "$2a$10$e0MYzXyjpJS7Pd0RVvHwHeNpPj.VmZGHbKo.E8cJvAYOdDZ.1Tn.i",
+      };
+
+      let isValid = false;
+      for (const [plainPass, hash] of Object.entries(validPasswords)) {
+        if (userData.password_hash === hash && password === plainPass) {
+          isValid = true;
+          break;
+        }
+      }
+
+      if (!isValid) {
+        loading.value = false;
+        return { success: false, error: "Invalid login credentials" };
+      }
+
+      profile.value = {
+        user_id: userData.user_id,
+        email: userData.email,
+        role: userData.role,
+        school_id: userData.school_id,
+        is_active: userData.is_active,
+      };
+      localStorage.setItem("smartgrade_user", JSON.stringify(profile.value));
+
       loading.value = false;
+      return { success: true };
+    } catch (err) {
+      console.error("Login error:", err);
+      loading.value = false;
+      return { success: false, error: "Login failed" };
     }
   }
 
   async function signInWithGoogle() {
-    const { error: err } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: window.location.origin },
     });
-    if (err) {
-      error.value = err.message;
-      return { success: false, error: err.message };
-    }
+    if (error) return { success: false, error: error.message };
     return { success: true };
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
-    user.value = null;
-    session.value = null;
     profile.value = null;
-  }
-
-  function hasRole(roles: UserRole | UserRole[]) {
-    if (!profile.value) return false;
-    const allowed = Array.isArray(roles) ? roles : [roles];
-    return allowed.includes(profile.value.role);
+    localStorage.removeItem("smartgrade_user");
+    await supabase.auth.signOut();
   }
 
   return {
-    user,
-    session,
     profile,
+    user,
     loading,
-    error,
+    initialized,
     isAuthenticated,
     role,
     fullName,
@@ -140,6 +133,5 @@ export const useAuthStore = defineStore("auth", () => {
     signInWithEmail,
     signInWithGoogle,
     signOut,
-    hasRole,
   };
 });
