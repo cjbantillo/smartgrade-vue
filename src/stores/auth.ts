@@ -62,16 +62,18 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange(async (_event: string, newSession: typeof session.value) => {
-      session.value = newSession;
-      user.value = newSession?.user ?? null;
+    supabase.auth.onAuthStateChange(
+      async (_event: string, newSession: typeof session.value) => {
+        session.value = newSession;
+        user.value = newSession?.user ?? null;
 
-      if (user.value) {
-        profile.value = await fetchProfile(user.value.id);
-      } else {
-        profile.value = null;
+        if (user.value) {
+          profile.value = await fetchProfile(user.value.id);
+        } else {
+          profile.value = null;
+        }
       }
-    });
+    );
   }
 
   async function signInWithEmail(email: string, password: string) {
