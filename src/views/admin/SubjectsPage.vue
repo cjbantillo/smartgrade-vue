@@ -35,12 +35,12 @@
             :search="search"
             :loading="loading"
           >
-            <template #item.subject_type="{ item }">
+            <template #[`item.subject_type`]="{ item }">
               <v-chip :color="typeColor(item.subject_type)" size="small" label>
                 {{ item.subject_type }}
               </v-chip>
             </template>
-            <template #item.actions="{ item }">
+            <template #[`item.actions`]="{ item }">
               <v-btn size="small" variant="text" icon @click="openDialog(item)">
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>

@@ -49,17 +49,17 @@
             :loading="loading"
             class="elevation-0"
           >
-            <template #item.role="{ item }">
+            <template #[`item.role`]="{ item }">
               <v-chip :color="roleColor(item.role)" size="small" label>
                 {{ item.role }}
               </v-chip>
             </template>
-            <template #item.is_active="{ item }">
+            <template #[`item.is_active`]="{ item }">
               <v-icon :color="item.is_active ? 'success' : 'grey'">
                 {{ item.is_active ? "mdi-check-circle" : "mdi-close-circle" }}
               </v-icon>
             </template>
-            <template #item.actions="{ item }">
+            <template #[`item.actions`]="{ item }">
               <v-btn size="small" variant="text" icon @click="openDialog(item)">
                 <v-icon>mdi-pencil</v-icon>
               </v-btn>
