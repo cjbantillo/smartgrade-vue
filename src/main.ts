@@ -1,28 +1,18 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
-import 'vuetify/styles'
-import '@mdi/font/css/materialdesignicons.css'
+import { createApp } from "vue";
+import { createVuetify } from "vuetify";
+import { aliases, mdi } from "vuetify/iconsets/mdi";
+import "@mdi/font/css/materialdesignicons.css";
+import "./style.css";
+import App from "./App.vue";
+import router from "./router";
 
 const vuetify = createVuetify({
-  components,
-  directives,
-  theme: {
-    defaultTheme: 'light',
-    themes: {
-      light: {
-        colors: {
-          primary: '#1e6d4a',
-          secondary: '#0066cc',
-          accent: '#8b4513',
-        }
-      }
-    }
-  }
-})
+  theme: { defaultTheme: "light" },
+  icons: {
+    defaultSet: "mdi",
+    aliases,
+    sets: { mdi },
+  },
+});
 
-const app = createApp(App)
-app.use(vuetify)
-app.mount('#app')
+createApp(App).use(router).use(vuetify).mount("#app");
