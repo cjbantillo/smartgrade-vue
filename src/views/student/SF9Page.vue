@@ -11,18 +11,73 @@
     <v-row v-if="loading">
       <v-col cols="12" class="text-center py-8">
         <v-progress-circular indeterminate color="primary" size="48" />
-        <div class="text-body-1 mt-4">Loading SF9 data...</div>
+        <div class="text-body-1 mt-4">Loading SF9...</div>
       </v-col>
     </v-row>
 
-    <!-- SF9 Available -->
-    <v-row v-else-if="sf9Available">
+    <!-- SF9 Available - Show Watermarked PDF -->
+    <v-row v-else-if="sf9Available && watermarkedPdfUrl">
       <v-col cols="12">
         <v-card elevation="4">
+          <v-card-title class="d-flex align-center">
+            <v-icon start color="primary">mdi-file-pdf-box</v-icon>
+            SF9 Report Card - {{ studentInfo.name }}
+            <v-spacer />
+            <v-chip color="info" variant="tonal" size="small" class="mr-2">
+              Version {{ documentInfo.version }}
+            </v-chip>
+            <v-chip color="success" variant="tonal" size="small">
+              {{ documentInfo.generatedDate }}
+            </v-chip>
+          </v-card-title>
+
           <v-card-text class="pa-0">
-            <div class="sf9-container pa-8">
+            <!-- PDF Embed with Watermark -->
+            <div class="pdf-container">
+              <iframe
+                :src="watermarkedPdfUrl"
+                width="100%"
+                height="700"
+                style="border: none"
+              />
+            </div>
+          </v-card-text>
+
+          <v-card-actions class="pa-4 bg-grey-lighten-4">
+            <v-alert
+              type="info"
+              variant="tonal"
+              density="compact"
+              class="flex-grow-1 mr-4"
+            >
+              This document contains an official watermark for student viewing.
+            </v-alert>
+            <v-btn
+              color="primary"
+              prepend-icon="mdi-download"
+              @click="downloadWatermarkedPDF"
+              :loading="downloading"
+            >
+              Download PDF
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- SF9 Preview Only (No Document Generated Yet) -->
+    <v-row v-else-if="hasGrades">
+      <v-col cols="12">
+        <v-alert type="warning" variant="tonal" class="mb-4">
+          <v-alert-title>Preview Mode</v-alert-title>
+          Your official SF9 document has not been generated yet. Below is a preview based on your current grades. Please contact your adviser to generate your official SF9.
+        </v-alert>
+
+        <v-card elevation="4">
+          <v-card-text class="pa-0">
+            <div class="sf9-preview pa-8">
               <!-- Watermark -->
-              <div class="watermark">OFFICIAL COPY - STUDENT VIEW</div>
+              <div class="watermark">PREVIEW ONLY - NOT OFFICIAL</div>
 
               <!-- Header -->
               <div class="text-center mb-6">
@@ -31,16 +86,12 @@
                   <v-icon v-else size="48" color="primary">mdi-school</v-icon>
                 </v-avatar>
                 <h2 class="text-h5 font-weight-bold">{{ schoolInfo.name }}</h2>
-                <p class="text-subtitle-2 text-grey">
-                  {{ schoolInfo.address }}
-                </p>
+                <p class="text-subtitle-2 text-grey">{{ schoolInfo.address }}</p>
                 <v-divider class="my-4" />
                 <h3 class="text-h6 font-weight-bold text-primary">
                   LEARNER'S PROGRESS REPORT CARD
                 </h3>
-                <p class="text-body-2">
-                  School Form 9 (SF9) - Senior High School
-                </p>
+                <p class="text-body-2">School Form 9 (SF9) - Senior High School</p>
               </div>
 
               <!-- Student Info -->
@@ -67,18 +118,12 @@
                   <v-table density="compact">
                     <tbody>
                       <tr>
-                        <td class="text-grey" style="width: 120px">
-                          Grade Level
-                        </td>
-                        <td class="font-weight-bold">
-                          {{ studentInfo.grade_level }}
-                        </td>
+                        <td class="text-grey" style="width: 120px">Grade Level</td>
+                        <td class="font-weight-bold">{{ studentInfo.grade_level }}</td>
                       </tr>
                       <tr>
                         <td class="text-grey">Section</td>
-                        <td class="font-weight-bold">
-                          {{ studentInfo.section }}
-                        </td>
+                        <td class="font-weight-bold">{{ studentInfo.section }}</td>
                       </tr>
                       <tr>
                         <td class="text-grey">School Year</td>
@@ -105,17 +150,9 @@
                     <td>{{ grade.subject }}</td>
                     <td class="text-center">{{ grade.sem1 ?? "N/A" }}</td>
                     <td class="text-center">{{ grade.sem2 ?? "N/A" }}</td>
-                    <td class="text-center font-weight-bold">
-                      {{ grade.final ?? "N/A" }}
-                    </td>
+                    <td class="text-center font-weight-bold">{{ grade.final ?? "N/A" }}</td>
                     <td class="text-center">
-                      <span
-                        :class="
-                          (grade.final ?? 0) >= 75
-                            ? 'text-success'
-                            : 'text-error'
-                        "
-                      >
+                      <span :class="(grade.final ?? 0) >= 75 ? 'text-success' : 'text-error'">
                         {{ (grade.final ?? 0) >= 75 ? "PASSED" : "FAILED" }}
                       </span>
                     </td>
@@ -124,78 +161,19 @@
                 <tfoot>
                   <tr class="bg-grey-lighten-3">
                     <td class="font-weight-bold">General Average</td>
-                    <td class="text-center font-weight-bold">
-                      {{ sem1Average }}
-                    </td>
-                    <td class="text-center font-weight-bold">
-                      {{ sem2Average }}
-                    </td>
-                    <td
-                      class="text-center font-weight-bold text-primary text-h6"
-                    >
-                      {{ finalAverage }}
-                    </td>
+                    <td class="text-center font-weight-bold">{{ sem1Average }}</td>
+                    <td class="text-center font-weight-bold">{{ sem2Average }}</td>
+                    <td class="text-center font-weight-bold text-primary text-h6">{{ finalAverage }}</td>
                     <td class="text-center">
                       <span class="text-success font-weight-bold">
-                        {{
-                          Number(finalAverage) >= 75 ? "PROMOTED" : "RETAINED"
-                        }}
+                        {{ Number(finalAverage) >= 75 ? "PROMOTED" : "RETAINED" }}
                       </span>
                     </td>
                   </tr>
                 </tfoot>
               </v-table>
-
-              <!-- Signatures -->
-              <v-row class="mt-8">
-                <v-col cols="4" class="text-center">
-                  <v-divider class="mb-1" />
-                  <p class="text-caption font-weight-bold">Class Adviser</p>
-                </v-col>
-                <v-col cols="4" class="text-center">
-                  <v-divider class="mb-1" />
-                  <p class="text-caption font-weight-bold">Parent/Guardian</p>
-                </v-col>
-                <v-col cols="4" class="text-center">
-                  <v-divider class="mb-1" />
-                  <p class="text-caption font-weight-bold">
-                    {{ schoolInfo.principal }}
-                  </p>
-                  <p class="text-caption text-grey">School Principal</p>
-                </v-col>
-              </v-row>
-
-              <!-- Footer -->
-              <div class="text-caption text-grey text-center mt-6">
-                <p>
-                  This is an official document. Any erasure or alteration
-                  renders it invalid.
-                </p>
-                <p>
-                  Document Version: {{ documentInfo.version }} | Generated:
-                  {{ documentInfo.generatedDate }}
-                </p>
-              </div>
             </div>
           </v-card-text>
-
-          <v-card-actions class="pa-4 bg-grey-lighten-4">
-            <v-spacer />
-            <v-btn
-              variant="outlined"
-              prepend-icon="mdi-printer"
-              @click="printSF9"
-            >
-              Print
-            </v-btn>
-            <v-btn
-              color="primary"
-              prepend-icon="mdi-download"
-              @click="downloadSF9"
-            >
-              Download PDF
-            </v-btn>
-          </v-card-actions>
         </v-card>
       </v-col>
     </v-row>
@@ -204,9 +182,7 @@
     <v-row v-else>
       <v-col cols="12">
         <v-card elevation="4" class="text-center pa-8">
-          <v-icon size="80" color="grey" class="mb-4"
-            >mdi-file-document-outline</v-icon
-          >
+          <v-icon size="80" color="grey" class="mb-4">mdi-file-document-outline</v-icon>
           <h2 class="text-h5 font-weight-bold mb-2">No SF9 Available</h2>
           <p class="text-grey">
             Your SF9 has not been generated yet. Please contact your adviser.
@@ -215,16 +191,15 @@
       </v-col>
     </v-row>
 
-    <v-snackbar v-model="snackbar" :color="snackbarColor">{{
-      snackbarText
-    }}</v-snackbar>
+    <v-snackbar v-model="snackbar" :color="snackbarColor">{{ snackbarText }}</v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
 import { supabase } from "@/lib/supabase";
+import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
 
 const authStore = useAuthStore();
 
@@ -236,8 +211,13 @@ interface Grade {
 }
 
 const loading = ref(true);
+const downloading = ref(false);
 const sf9Available = ref(false);
+const hasGrades = ref(false);
 const studentId = ref<number | null>(null);
+const documentFilePath = ref<string | null>(null);
+const watermarkedPdfUrl = ref<string | null>(null);
+const watermarkedPdfBlob = ref<Blob | null>(null);
 
 const schoolInfo = ref({
   name: "",
@@ -299,11 +279,10 @@ async function loadSchoolInfo() {
   if (data) {
     schoolInfo.value = {
       name: data.school_name || "School Name",
-      address: data.school_address || "",
+      address: data.address || "",
       principal: data.principal_name || "Principal",
       logo: data.logo_path
-        ? supabase.storage.from("logos").getPublicUrl(data.logo_path).data
-            .publicUrl
+        ? supabase.storage.from("logos").getPublicUrl(data.logo_path).data.publicUrl
         : "",
     };
   }
@@ -315,16 +294,14 @@ async function loadStudentInfo() {
 
   const { data: student } = await supabase
     .from("students")
-    .select(
-      `
+    .select(`
       student_id, lrn, first_name, last_name, gender,
       enrollments(
         section_subjects(
           sections(name, school_years(year_label))
         )
       )
-    `
-    )
+    `)
     .eq("user_id", userId)
     .single();
 
@@ -351,7 +328,7 @@ async function loadStudentInfo() {
 async function loadSF9Document() {
   if (!studentId.value) return false;
 
-  // Check if SF9 document exists
+  // Check if SF9 document exists (only active ones for student view)
   const { data: doc } = await supabase
     .from("documents")
     .select("*")
@@ -367,6 +344,7 @@ async function loadSF9Document() {
       version: doc.version || 1,
       generatedDate: new Date(doc.created_at).toLocaleDateString(),
     };
+    documentFilePath.value = doc.file_path;
     return true;
   }
 
@@ -376,25 +354,19 @@ async function loadSF9Document() {
 async function loadGrades() {
   if (!studentId.value) return;
 
-  // Get all enrollments with grades grouped by subject
   const { data } = await supabase
     .from("enrollments")
-    .select(
-      `
+    .select(`
       semester_id,
       section_subjects(subjects(subject_name)),
       grades(final_grade)
-    `
-    )
+    `)
     .eq("student_id", studentId.value);
 
   if (!data) return;
 
   // Group grades by subject
-  const subjectGrades: Record<
-    string,
-    { sem1: number | null; sem2: number | null }
-  > = {};
+  const subjectGrades: Record<string, { sem1: number | null; sem2: number | null }> = {};
 
   data.forEach((e: any) => {
     const subjectName = e.section_subjects?.subjects?.subject_name || "Unknown";
@@ -412,7 +384,6 @@ async function loadGrades() {
     }
   });
 
-  // Convert to grades array
   grades.value = Object.entries(subjectGrades).map(([subject, g]) => ({
     subject,
     sem1: g.sem1,
@@ -422,15 +393,109 @@ async function loadGrades() {
         ? Math.round((g.sem1 + g.sem2) / 2)
         : g.sem1 ?? g.sem2,
   }));
+
+  hasGrades.value = grades.value.length > 0;
 }
 
-function printSF9() {
-  window.print();
+async function addWatermarkToPdf(pdfBytes: ArrayBuffer): Promise<Blob> {
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pages = pdfDoc.getPages();
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  for (const page of pages) {
+    const { width, height } = page.getSize();
+
+    // Draw diagonal watermark text
+    page.drawText("Official Copy – Student View", {
+      x: width / 2 - 150,
+      y: height / 2,
+      size: 40,
+      font,
+      color: rgb(0.7, 0.7, 0.7),
+      rotate: degrees(45),
+      opacity: 0.35,
+    });
+
+    // Add secondary watermarks
+    page.drawText("Official Copy – Student View", {
+      x: width / 2 - 150,
+      y: height / 2 + 200,
+      size: 30,
+      font,
+      color: rgb(0.8, 0.8, 0.8),
+      rotate: degrees(45),
+      opacity: 0.25,
+    });
+
+    page.drawText("Official Copy – Student View", {
+      x: width / 2 - 150,
+      y: height / 2 - 200,
+      size: 30,
+      font,
+      color: rgb(0.8, 0.8, 0.8),
+      rotate: degrees(45),
+      opacity: 0.25,
+    });
+
+    // Add footer with student info
+    page.drawText(`Student: ${studentInfo.value.name} | LRN: ${studentInfo.value.lrn}`, {
+      x: 50,
+      y: 15,
+      size: 8,
+      font,
+      color: rgb(0.5, 0.5, 0.5),
+      opacity: 0.8,
+    });
+  }
+
+  const watermarkedBytes = await pdfDoc.save();
+  return new Blob([new Uint8Array(watermarkedBytes)], { type: "application/pdf" });
 }
 
-function downloadSF9() {
-  notify("Downloading watermarked PDF...");
-  // TODO: Implement PDF generation with watermark
+async function loadWatermarkedPdf() {
+  if (!documentFilePath.value) return;
+
+  try {
+    // Download original PDF from storage
+    const { data, error } = await supabase.storage
+      .from("documents")
+      .download(documentFilePath.value);
+
+    if (error || !data) {
+      console.error("Error downloading PDF:", error);
+      notify("Failed to load SF9 document", "error");
+      return;
+    }
+
+    // Add watermark using pdf-lib
+    const pdfBytes = await data.arrayBuffer();
+    const watermarkedBlob = await addWatermarkToPdf(pdfBytes);
+    
+    watermarkedPdfBlob.value = watermarkedBlob;
+    watermarkedPdfUrl.value = URL.createObjectURL(watermarkedBlob);
+  } catch (error) {
+    console.error("Error processing PDF:", error);
+    notify("Failed to process SF9 document", "error");
+  }
+}
+
+function downloadWatermarkedPDF() {
+  if (!watermarkedPdfBlob.value) {
+    notify("No PDF available to download", "warning");
+    return;
+  }
+
+  downloading.value = true;
+
+  const url = URL.createObjectURL(watermarkedPdfBlob.value);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `SF9_${studentInfo.value.lrn}_official_copy.pdf`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  notify("Watermarked PDF downloaded successfully", "success");
+  downloading.value = false;
 }
 
 async function fetchSF9Data() {
@@ -444,28 +509,37 @@ async function fetchSF9Data() {
       const hasSF9 = await loadSF9Document();
       await loadGrades();
 
-      // Show SF9 if document exists OR if student has grades
-      sf9Available.value = hasSF9 || grades.value.length > 0;
-
-      if (!hasSF9 && grades.value.length > 0) {
-        documentInfo.value = {
-          version: 0,
-          generatedDate: "Preview Only - Not Yet Generated",
-        };
+      if (hasSF9 && documentFilePath.value) {
+        // Load and watermark the PDF for display
+        await loadWatermarkedPdf();
+        sf9Available.value = true;
       }
     }
   } catch (error) {
     console.error("Error loading SF9 data:", error);
+    notify("Failed to load SF9 data", "error");
   }
 
   loading.value = false;
 }
 
 onMounted(fetchSF9Data);
+
+onUnmounted(() => {
+  // Cleanup blob URL
+  if (watermarkedPdfUrl.value) {
+    URL.revokeObjectURL(watermarkedPdfUrl.value);
+  }
+});
 </script>
 
 <style scoped>
-.sf9-container {
+.pdf-container {
+  background: #f5f5f5;
+  min-height: 700px;
+}
+
+.sf9-preview {
   position: relative;
   background: white;
   max-width: 800px;
@@ -491,7 +565,8 @@ onMounted(fetchSF9Data);
 }
 
 @media print {
-  .v-card-actions {
+  .v-card-actions,
+  .v-alert {
     display: none !important;
   }
 }
