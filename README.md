@@ -393,13 +393,6 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-### Demo Credentials
-
-| Role    | Email                     | Password   |
-| ------- | ------------------------- | ---------- |
-| Admin   | admin@deped.gov.ph        | admin123   |
-| Teacher | teacher1@deped.gov.ph     | teacher123 |
-| Student | kirstein.nojapa@gmail.com | password   |
 
 ---
 

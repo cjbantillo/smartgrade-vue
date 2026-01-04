@@ -63,16 +63,7 @@
             Continue with Google
           </v-btn>
 
-          <div class="text-center mt-6">
-            <p class="text-caption text-grey">Demo Credentials:</p>
-            <p class="text-caption">Admin: admin@deped.gov.ph / admin123</p>
-            <p class="text-caption">
-              Teacher: teacher1@deped.gov.ph / teacher123
-            </p>
-            <p class="text-caption">
-              Student: kirstein.nojapa@gmail.com / password
-            </p>
-          </div>
+
         </v-card>
       </v-col>
     </v-row>
