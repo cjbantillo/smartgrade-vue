@@ -18,6 +18,7 @@ const AdviserDashboard = () => import("@/views/adviser/AdviserDashboard.vue");
 const AdviserGradesPage = () => import("@/views/adviser/GradesPage.vue");
 const AdviserDocumentsPage = () => import("@/views/adviser/DocumentsPage.vue");
 const AdviserStudentsPage = () => import("@/views/adviser/StudentsPage.vue");
+const AdviserEnrollPage = () => import("@/views/adviser/EnrollPage.vue");
 
 // Student views
 const StudentDashboard = () => import("@/views/student/StudentDashboard.vue");
@@ -95,6 +96,12 @@ const routes: RouteRecordRaw[] = [
     path: "/adviser/students",
     name: "AdviserStudents",
     component: AdviserStudentsPage,
+    meta: { requiresAuth: true, roles: ["adviser", "teacher"] },
+  },
+  {
+    path: "/adviser/enroll",
+    name: "AdviserEnroll",
+    component: AdviserEnrollPage,
     meta: { requiresAuth: true, roles: ["adviser", "teacher"] },
   },
 

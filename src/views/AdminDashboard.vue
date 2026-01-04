@@ -1,668 +1,476 @@
 <template>
-  <v-container fluid class="pa-6 dashboard-shell">
-    <v-row>
+  <v-container fluid class="pa-6">
+    <!-- Access Denied -->
+    <v-row v-if="accessDenied">
       <v-col cols="12">
-        <v-card class="hero-card" elevation="8">
-          <div class="hero-content">
-            <div>
-              <div class="text-caption text-uppercase text-grey-darken-1 mb-1">
-                Admin
-              </div>
-              <div class="text-h4 font-weight-bold">
-                School Operations Dashboard
-              </div>
-              <div class="text-body-2 text-grey-darken-1">
-                Monitor academic health, keep staff aligned, and act fast on
-                risk.
-              </div>
-              <div class="d-flex flex-wrap align-center gap-2 mt-3">
-                <v-chip
-                  color="primary"
-                  variant="elevated"
-                  label
-                  prepend-icon="mdi-calendar"
-                  >{{ term }}</v-chip
-                >
-                <v-chip
-                  color="success"
-                  variant="tonal"
-                  label
-                  prepend-icon="mdi-shield-check"
-                  >Compliant</v-chip
-                >
-                <v-chip
-                  color="warning"
-                  variant="tonal"
-                  label
-                  prepend-icon="mdi-bell-ring"
-                  >{{ notifications }} alerts</v-chip
-                >
-              </div>
-            </div>
-            <div class="d-flex flex-column align-end gap-2">
-              <v-btn
-                color="primary"
-                prepend-icon="mdi-refresh"
-                @click="refreshData"
-                :loading="refreshing"
-                >Refresh</v-btn
-              >
-              <div class="text-caption text-grey">
-                Last sync: {{ lastRefreshed }}
-              </div>
-            </div>
+        <v-alert type="error" variant="tonal" class="text-center">
+          <v-icon size="48" class="mb-2">mdi-shield-alert</v-icon>
+          <div class="text-h6">Access Denied</div>
+          <div class="text-body-2">
+            You do not have permission to access this page.
           </div>
-        </v-card>
+          <v-btn color="primary" class="mt-4" to="/">Go Home</v-btn>
+        </v-alert>
       </v-col>
     </v-row>
 
-    <v-row class="mt-2" dense>
-      <v-col v-for="stat in stats" :key="stat.title" cols="12" sm="6" md="3">
-        <v-card elevation="4" class="stat-card">
-          <div class="d-flex align-center justify-space-between">
+    <template v-else>
+      <!-- Header -->
+      <v-row>
+        <v-col cols="12">
+          <div class="d-flex justify-space-between align-center flex-wrap">
             <div>
-              <div class="text-caption text-grey-darken-1">
-                {{ stat.title }}
-              </div>
-              <div class="text-h5 font-weight-bold">{{ stat.value }}</div>
-              <div
-                class="text-caption"
-                :class="
-                  stat.trend.startsWith('+') ? 'text-success' : 'text-error'
-                "
-              >
-                {{ stat.trend }} vs last period
-              </div>
+              <h1 class="text-h4 font-weight-bold mb-1">Admin Dashboard</h1>
+              <p class="text-body-1 text-grey-darken-1">
+                Monitor school operations and manage system settings.
+              </p>
             </div>
-            <v-avatar size="44" :color="stat.color" variant="tonal">
-              <v-icon size="26">{{ stat.icon }}</v-icon>
-            </v-avatar>
+            <v-btn
+              color="primary"
+              prepend-icon="mdi-refresh"
+              :loading="loading"
+              @click="loadData"
+            >
+              Refresh
+            </v-btn>
           </div>
-        </v-card>
-      </v-col>
-    </v-row>
+        </v-col>
+      </v-row>
 
-    <v-row class="mt-4" dense>
-      <v-col cols="12" md="8">
-        <v-card elevation="6" class="h-100">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div>
-              <div class="text-subtitle-1 font-weight-bold">
-                User Management
+      <!-- Stats Cards -->
+      <v-row class="mt-4">
+        <v-col cols="12" sm="6" md="3">
+          <v-card elevation="4" class="pa-4">
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-caption text-grey-darken-1">
+                  Total Students
+                </div>
+                <div class="text-h4 font-weight-bold">{{ stats.students }}</div>
               </div>
-              <div class="text-caption text-grey-darken-1">
-                Control access for admins, teachers, and staff.
-              </div>
+              <v-avatar color="primary" size="48" variant="tonal">
+                <v-icon size="28">mdi-school</v-icon>
+              </v-avatar>
             </div>
-            <div class="d-flex gap-2">
-              <v-text-field
-                v-model="search"
-                density="compact"
-                hide-details
-                prepend-inner-icon="mdi-magnify"
-                placeholder="Search users"
-                style="max-width: 220px"
-              />
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" sm="6" md="3">
+          <v-card elevation="4" class="pa-4">
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-caption text-grey-darken-1">
+                  Total Teachers
+                </div>
+                <div class="text-h4 font-weight-bold">{{ stats.teachers }}</div>
+              </div>
+              <v-avatar color="success" size="48" variant="tonal">
+                <v-icon size="28">mdi-account-tie</v-icon>
+              </v-avatar>
+            </div>
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" sm="6" md="3">
+          <v-card elevation="4" class="pa-4">
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-caption text-grey-darken-1">
+                  Total Sections
+                </div>
+                <div class="text-h4 font-weight-bold">{{ stats.sections }}</div>
+              </div>
+              <v-avatar color="info" size="48" variant="tonal">
+                <v-icon size="28">mdi-google-classroom</v-icon>
+              </v-avatar>
+            </div>
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" sm="6" md="3">
+          <v-card elevation="4" class="pa-4">
+            <div class="d-flex align-center justify-space-between">
+              <div>
+                <div class="text-caption text-grey-darken-1">
+                  Active School Year
+                </div>
+                <div class="text-h5 font-weight-bold">
+                  {{ stats.activeYear || "Not Set" }}
+                </div>
+              </div>
+              <v-avatar color="warning" size="48" variant="tonal">
+                <v-icon size="28">mdi-calendar</v-icon>
+              </v-avatar>
+            </div>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Quick Actions & Recent Activity -->
+      <v-row class="mt-4">
+        <v-col cols="12" md="4">
+          <v-card elevation="4" class="h-100">
+            <v-card-title class="text-subtitle-1 font-weight-bold">
+              Quick Actions
+            </v-card-title>
+            <v-card-text class="d-flex flex-column gap-2">
               <v-btn
+                block
                 color="primary"
-                prepend-icon="mdi-account-plus"
-                @click="newUserDialog = true"
-                >Add User</v-btn
+                variant="tonal"
+                prepend-icon="mdi-cog"
+                to="/admin/settings"
               >
-            </div>
-          </v-card-title>
-
-          <v-divider />
-
-          <v-card-text class="pa-0">
-            <v-table density="comfortable">
-              <thead>
-                <tr>
-                  <th class="text-left">Name</th>
-                  <th class="text-left">Role</th>
-                  <th class="text-left">Status</th>
-                  <th class="text-left">Last Active</th>
-                  <th class="text-left" style="width: 160px">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="user in filteredUsers" :key="user.id">
-                  <td>
-                    <div class="font-weight-medium">{{ user.name }}</div>
-                    <div class="text-caption text-grey-darken-1">
-                      {{ user.email }}
-                    </div>
-                  </td>
-                  <td>{{ user.role }}</td>
-                  <td>
-                    <v-chip
-                      :color="statusColor(user.status)"
-                      size="small"
-                      label
-                      variant="tonal"
-                      >{{ user.status }}</v-chip
-                    >
-                  </td>
-                  <td class="text-grey-darken-1">{{ user.lastActive }}</td>
-                  <td>
-                    <div class="d-flex flex-wrap gap-1">
-                      <v-btn
-                        size="x-small"
-                        variant="tonal"
-                        color="primary"
-                        @click="toggleStatus(user.id)"
-                      >
-                        {{ user.status === "active" ? "Disable" : "Activate" }}
-                      </v-btn>
-                      <v-btn
-                        size="x-small"
-                        variant="text"
-                        color="error"
-                        @click="removeUser(user.id)"
-                        >Remove</v-btn
-                      >
-                    </div>
-                  </td>
-                </tr>
-                <tr v-if="!filteredUsers.length">
-                  <td colspan="5" class="text-center py-6 text-grey">
-                    No users match your search.
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </v-card-text>
-        </v-card>
-      </v-col>
-
-      <v-col cols="12" md="4">
-        <v-card elevation="6" class="mb-4">
-          <v-card-title class="text-subtitle-1 font-weight-bold"
-            >School Health</v-card-title
-          >
-          <v-card-text class="d-flex flex-column gap-3">
-            <div>
-              <div class="d-flex justify-space-between align-center mb-1">
-                <span class="text-body-2">Attendance</span>
-                <span class="text-body-2 font-weight-medium"
-                  >{{ metrics.attendance }}%</span
-                >
-              </div>
-              <v-progress-linear
-                color="primary"
-                height="8"
-                :model-value="metrics.attendance"
-                rounded
-              />
-            </div>
-            <div>
-              <div class="d-flex justify-space-between align-center mb-1">
-                <span class="text-body-2">Submission Rate</span>
-                <span class="text-body-2 font-weight-medium"
-                  >{{ metrics.submissionRate }}%</span
-                >
-              </div>
-              <v-progress-linear
-                color="success"
-                height="8"
-                :model-value="metrics.submissionRate"
-                rounded
-              />
-            </div>
-            <div>
-              <div class="d-flex justify-space-between align-center mb-1">
-                <span class="text-body-2">Support Tickets</span>
-                <span class="text-body-2 font-weight-medium"
-                  >{{ metrics.openTickets }} open</span
-                >
-              </div>
-              <v-progress-linear
-                color="warning"
-                height="8"
-                :model-value="ticketLoad"
-                rounded
-              />
-            </div>
-          </v-card-text>
-        </v-card>
-
-        <v-card elevation="6">
-          <v-card-title class="text-subtitle-1 font-weight-bold"
-            >Quick Actions</v-card-title
-          >
-          <v-card-text class="d-flex flex-column gap-2">
-            <v-btn
-              block
-              variant="tonal"
-              prepend-icon="mdi-shield-account"
-              color="primary"
-              @click="notify('Audit trail exported')"
-              >Export Audit Trail</v-btn
-            >
-            <v-btn
-              block
-              variant="tonal"
-              prepend-icon="mdi-email"
-              color="secondary"
-              @click="notify('Parents notified')"
-              >Notify Parents</v-btn
-            >
-            <v-btn
-              block
-              variant="outlined"
-              prepend-icon="mdi-cloud-refresh"
-              color="primary"
-              @click="refreshData"
-              >Resync Supabase</v-btn
-            >
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <v-row class="mt-4" dense>
-      <v-col cols="12">
-        <v-card elevation="6">
-          <v-card-title class="d-flex align-center justify-space-between">
-            <div>
-              <div class="text-subtitle-1 font-weight-bold">
                 School Settings
+              </v-btn>
+              <v-btn
+                block
+                color="success"
+                variant="tonal"
+                prepend-icon="mdi-account-group"
+                to="/admin/users"
+              >
+                User Management
+              </v-btn>
+              <v-btn
+                block
+                color="info"
+                variant="tonal"
+                prepend-icon="mdi-google-classroom"
+                to="/admin/sections"
+              >
+                Section Management
+              </v-btn>
+              <v-btn
+                block
+                color="warning"
+                variant="tonal"
+                prepend-icon="mdi-book-open-variant"
+                to="/admin/subjects"
+              >
+                Subject Management
+              </v-btn>
+              <v-btn
+                block
+                color="secondary"
+                variant="tonal"
+                prepend-icon="mdi-calendar-range"
+                to="/admin/school-years"
+              >
+                School Year Management
+              </v-btn>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" md="8">
+          <v-card elevation="4" class="h-100">
+            <v-card-title class="d-flex align-center justify-space-between">
+              <span class="text-subtitle-1 font-weight-bold"
+                >Recent Activity</span
+              >
+              <v-chip size="small" color="primary" variant="tonal">
+                Last 10
+              </v-chip>
+            </v-card-title>
+            <v-card-text class="pa-0">
+              <v-table density="comfortable">
+                <thead>
+                  <tr>
+                    <th>Action</th>
+                    <th>User</th>
+                    <th>Target</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="log in auditLogs" :key="log.audit_id">
+                    <td>
+                      <v-chip
+                        :color="getActionColor(log.action)"
+                        size="small"
+                        label
+                      >
+                        {{ log.action }}
+                      </v-chip>
+                    </td>
+                    <td>{{ log.user_email || "System" }}</td>
+                    <td class="text-grey">{{ log.target_type || "-" }}</td>
+                    <td class="text-caption text-grey">
+                      {{ formatTime(log.created_at) }}
+                    </td>
+                  </tr>
+                  <tr v-if="!auditLogs.length && !loading">
+                    <td colspan="4" class="text-center py-6 text-grey">
+                      No recent activity.
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Summary Cards -->
+      <v-row class="mt-4">
+        <v-col cols="12" md="6">
+          <v-card elevation="4">
+            <v-card-title class="text-subtitle-1 font-weight-bold">
+              System Overview
+            </v-card-title>
+            <v-card-text>
+              <v-list density="compact">
+                <v-list-item>
+                  <template #prepend>
+                    <v-icon color="primary">mdi-book</v-icon>
+                  </template>
+                  <v-list-item-title>Total Subjects</v-list-item-title>
+                  <template #append>
+                    <span class="font-weight-bold">{{ stats.subjects }}</span>
+                  </template>
+                </v-list-item>
+                <v-list-item>
+                  <template #prepend>
+                    <v-icon color="success">mdi-file-document</v-icon>
+                  </template>
+                  <v-list-item-title>Documents Generated</v-list-item-title>
+                  <template #append>
+                    <span class="font-weight-bold">{{ stats.documents }}</span>
+                  </template>
+                </v-list-item>
+                <v-list-item>
+                  <template #prepend>
+                    <v-icon color="info">mdi-clipboard-check</v-icon>
+                  </template>
+                  <v-list-item-title>Grades Recorded</v-list-item-title>
+                  <template #append>
+                    <span class="font-weight-bold">{{ stats.grades }}</span>
+                  </template>
+                </v-list-item>
+              </v-list>
+            </v-card-text>
+          </v-card>
+        </v-col>
+
+        <v-col cols="12" md="6">
+          <v-card elevation="4">
+            <v-card-title class="text-subtitle-1 font-weight-bold">
+              School Information
+            </v-card-title>
+            <v-card-text>
+              <div class="d-flex align-center gap-4">
+                <v-avatar size="64" color="grey-lighten-3" rounded>
+                  <v-img v-if="schoolInfo.logo" :src="schoolInfo.logo" />
+                  <v-icon v-else size="32" color="grey">mdi-school</v-icon>
+                </v-avatar>
+                <div>
+                  <div class="text-h6 font-weight-bold">
+                    {{ schoolInfo.name || "School Name Not Set" }}
+                  </div>
+                  <div class="text-body-2 text-grey">
+                    Principal: {{ schoolInfo.principal || "Not Set" }}
+                  </div>
+                </div>
               </div>
-              <div class="text-caption text-grey-darken-1">
-                Update academic profile and platform defaults.
-              </div>
-            </div>
-            <div class="text-caption text-grey">
-              Last saved: {{ lastSaved || "Not yet saved" }}
-            </div>
-          </v-card-title>
-          <v-divider />
-          <v-card-text>
-            <v-form ref="settingsForm" @submit.prevent="saveSettings">
-              <v-row dense>
-                <v-col cols="12" md="4">
-                  <v-text-field
-                    v-model="settings.schoolName"
-                    label="School Name"
-                    required
-                    density="comfortable"
-                  />
-                </v-col>
-                <v-col cols="12" md="4">
-                  <v-text-field
-                    v-model="settings.academicYear"
-                    label="Academic Year"
-                    required
-                    density="comfortable"
-                  />
-                </v-col>
-                <v-col cols="12" md="4">
-                  <v-select
-                    v-model="settings.gradingScale"
-                    :items="gradingScales"
-                    label="Grading Scale"
-                    density="comfortable"
-                    required
-                  />
-                </v-col>
+            </v-card-text>
+          </v-card>
+        </v-col>
+      </v-row>
+    </template>
 
-                <v-col cols="12" md="4">
-                  <v-select
-                    v-model="settings.term"
-                    :items="terms"
-                    label="Current Term"
-                    density="comfortable"
-                  />
-                </v-col>
-                <v-col cols="12" md="4">
-                  <v-select
-                    v-model="settings.timezone"
-                    :items="timezones"
-                    label="Timezone"
-                    density="comfortable"
-                  />
-                </v-col>
-                <v-col cols="12" md="4">
-                  <v-switch
-                    v-model="settings.enableNotifications"
-                    inset
-                    label="Notify staff on grade changes"
-                    color="primary"
-                  />
-                  <v-switch
-                    v-model="settings.enableTwoFactor"
-                    inset
-                    label="Require 2FA for admins"
-                    color="success"
-                  />
-                </v-col>
-              </v-row>
-
-              <div class="d-flex justify-end gap-2 mt-2">
-                <v-btn variant="text" color="secondary" @click="resetSettings"
-                  >Reset</v-btn
-                >
-                <v-btn
-                  type="submit"
-                  color="primary"
-                  :loading="saving"
-                  prepend-icon="mdi-content-save"
-                  >Save Settings</v-btn
-                >
-              </div>
-            </v-form>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <v-dialog v-model="newUserDialog" max-width="480">
-      <v-card>
-        <v-card-title class="text-h6">Add User</v-card-title>
-        <v-card-text>
-          <v-form @submit.prevent="addUser">
-            <v-text-field
-              v-model="newUser.name"
-              label="Full Name"
-              required
-              density="comfortable"
-            />
-            <v-text-field
-              v-model="newUser.email"
-              label="Email"
-              required
-              density="comfortable"
-              type="email"
-            />
-            <v-select
-              v-model="newUser.role"
-              :items="roles"
-              label="Role"
-              required
-              density="comfortable"
-            />
-          </v-form>
-        </v-card-text>
-        <v-card-actions class="d-flex justify-end">
-          <v-btn variant="text" @click="newUserDialog = false">Cancel</v-btn>
-          <v-btn
-            color="primary"
-            @click="addUser"
-            prepend-icon="mdi-account-plus"
-            >Add</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-snackbar
-      v-model="snackbar"
-      :color="snackbarColor"
-      timeout="2600"
-      variant="flat"
-    >
+    <v-snackbar v-model="snackbar" :color="snackbarColor">
       {{ snackbarText }}
     </v-snackbar>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { supabase } from "@/lib/supabase";
 
-type UserStatus = "active" | "invited" | "suspended";
-type UserRole = "Admin" | "Teacher" | "Staff";
+const router = useRouter();
+const authStore = useAuthStore();
 
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: UserStatus;
-  lastActive: string;
-};
-
-type Stat = {
-  title: string;
-  value: string;
-  trend: string;
-  icon: string;
-  color: string;
-};
-
-const term = ref("SY 2025-2026");
-const notifications = ref(3);
-const lastRefreshed = ref("Just now");
-const refreshing = ref(false);
-
-const stats = ref<Stat[]>([
-  {
-    title: "Enrolled Students",
-    value: "1,240",
-    trend: "+3.1%",
-    icon: "mdi-school",
-    color: "primary",
-  },
-  {
-    title: "Active Teachers",
-    value: "68",
-    trend: "+1.4%",
-    icon: "mdi-account-tie",
-    color: "success",
-  },
-  {
-    title: "Average GPA",
-    value: "3.42",
-    trend: "+0.05",
-    icon: "mdi-chart-line",
-    color: "info",
-  },
-  {
-    title: "Open Tickets",
-    value: "12",
-    trend: "-2",
-    icon: "mdi-lifebuoy",
-    color: "warning",
-  },
-]);
-
-const users = ref<User[]>([
-  {
-    id: 1,
-    name: "Alice Johnson",
-    email: "alice.j@smartgrade.edu",
-    role: "Admin",
-    status: "active",
-    lastActive: "Today",
-  },
-  {
-    id: 2,
-    name: "Mark Lee",
-    email: "mlee@smartgrade.edu",
-    role: "Teacher",
-    status: "active",
-    lastActive: "2h ago",
-  },
-  {
-    id: 3,
-    name: "Dana Cruz",
-    email: "dcruz@smartgrade.edu",
-    role: "Staff",
-    status: "invited",
-    lastActive: "Pending",
-  },
-  {
-    id: 4,
-    name: "Rowena Tan",
-    email: "rtan@smartgrade.edu",
-    role: "Teacher",
-    status: "suspended",
-    lastActive: "3d ago",
-  },
-]);
-
-const metrics = reactive({
-  attendance: 94,
-  submissionRate: 88,
-  openTickets: 12,
-});
-
-const settings = reactive({
-  schoolName: "SmartGrade Academy",
-  academicYear: "2025-2026",
-  gradingScale: "Percentage",
-  term: "2nd Semester",
-  timezone: "Asia/Manila",
-  enableNotifications: true,
-  enableTwoFactor: true,
-});
-
-const gradingScales = ["Percentage", "Letter", "Points"];
-const terms = ["1st Semester", "2nd Semester", "Summer"];
-const timezones = ["Asia/Manila", "Asia/Singapore", "UTC"];
-const roles: UserRole[] = ["Admin", "Teacher", "Staff"];
-
-const search = ref("");
-const saving = ref(false);
-const lastSaved = ref<string | null>(null);
-const snackbar = ref(false);
-const snackbarText = ref("");
-const snackbarColor = ref("primary");
-const newUserDialog = ref(false);
-const newUser = reactive({ name: "", email: "", role: "Teacher" as UserRole });
-
-const filteredUsers = computed(() => {
-  if (!search.value) return users.value;
-  const termVal = search.value.toLowerCase();
-  return users.value.filter((u) =>
-    [u.name, u.email, u.role, u.status].some((field) =>
-      field.toLowerCase().includes(termVal)
-    )
-  );
-});
-
-const ticketLoad = computed(() => Math.min(100, metrics.openTickets * 10));
-
-function statusColor(status: UserStatus) {
-  if (status === "active") return "success";
-  if (status === "invited") return "warning";
-  return "error";
+interface AuditLog {
+  audit_id: number;
+  action: string;
+  user_email?: string;
+  target_type?: string;
+  target_id?: number;
+  created_at: string;
 }
 
-function notify(message: string, color: string = "primary") {
+const loading = ref(false);
+const accessDenied = computed(() => authStore.role !== "admin");
+
+const stats = ref({
+  students: 0,
+  teachers: 0,
+  sections: 0,
+  subjects: 0,
+  documents: 0,
+  grades: 0,
+  activeYear: "",
+});
+
+const schoolInfo = ref({
+  name: "",
+  principal: "",
+  logo: "",
+});
+
+const auditLogs = ref<AuditLog[]>([]);
+
+const snackbar = ref(false);
+const snackbarText = ref("");
+const snackbarColor = ref("success");
+
+function notify(message: string, color = "success") {
   snackbarText.value = message;
   snackbarColor.value = color;
   snackbar.value = true;
 }
 
-function refreshData() {
-  if (refreshing.value) return;
-  refreshing.value = true;
-  setTimeout(() => {
-    lastRefreshed.value = "Just refreshed";
-    notify("Data refreshed", "primary");
-    refreshing.value = false;
-  }, 900);
+function getActionColor(action: string): string {
+  const colors: Record<string, string> = {
+    CREATE: "success",
+    UPDATE: "info",
+    DELETE: "error",
+    LOGIN: "primary",
+    GENERATE: "warning",
+    REVOKE: "error",
+  };
+  return colors[action?.toUpperCase()] || "grey";
 }
 
-function toggleStatus(id: number) {
-  const user = users.value.find((u) => u.id === id);
-  if (!user) return;
-  user.status = user.status === "active" ? "suspended" : "active";
-  notify(`User ${user.status === "active" ? "activated" : "disabled"}`);
+function formatTime(dateStr: string): string {
+  if (!dateStr) return "-";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
 }
 
-function removeUser(id: number) {
-  users.value = users.value.filter((u) => u.id !== id);
-  notify("User removed", "error");
-}
+async function loadData() {
+  if (accessDenied.value) return;
 
-function addUser() {
-  if (!newUser.name || !newUser.email) {
-    notify("Name and email are required", "error");
-    return;
+  loading.value = true;
+
+  try {
+    // Fetch counts in parallel
+    const [
+      studentsRes,
+      teachersRes,
+      sectionsRes,
+      subjectsRes,
+      documentsRes,
+      gradesRes,
+      activeYearRes,
+      schoolRes,
+      logsRes,
+    ] = await Promise.all([
+      supabase
+        .from("students")
+        .select("student_id", { count: "exact", head: true }),
+      supabase
+        .from("teachers")
+        .select("teacher_id", { count: "exact", head: true }),
+      supabase
+        .from("sections")
+        .select("section_id", { count: "exact", head: true }),
+      supabase
+        .from("subjects")
+        .select("subject_id", { count: "exact", head: true }),
+      supabase
+        .from("documents")
+        .select("document_id", { count: "exact", head: true }),
+      supabase
+        .from("grades")
+        .select("grade_id", { count: "exact", head: true }),
+      supabase
+        .from("school_years")
+        .select("year_label")
+        .eq("is_active", true)
+        .single(),
+      supabase.from("schools").select("*").limit(1).single(),
+      supabase
+        .from("audit_logs")
+        .select("*, users(email)")
+        .order("created_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    stats.value = {
+      students: studentsRes.count || 0,
+      teachers: teachersRes.count || 0,
+      sections: sectionsRes.count || 0,
+      subjects: subjectsRes.count || 0,
+      documents: documentsRes.count || 0,
+      grades: gradesRes.count || 0,
+      activeYear: activeYearRes.data?.year_label || "",
+    };
+
+    if (schoolRes.data) {
+      schoolInfo.value = {
+        name: schoolRes.data.school_name || "",
+        principal: schoolRes.data.principal_name || "",
+        logo: schoolRes.data.logo_path
+          ? supabase.storage
+              .from("logos")
+              .getPublicUrl(schoolRes.data.logo_path).data.publicUrl
+          : "",
+      };
+    }
+
+    if (logsRes.data) {
+      auditLogs.value = logsRes.data.map((log: any) => ({
+        audit_id: log.audit_id || log.id,
+        action: log.action,
+        user_email: log.users?.email || log.user_email,
+        target_type: log.target_type,
+        target_id: log.target_id,
+        created_at: log.created_at,
+      }));
+    }
+  } catch (error) {
+    console.error("Error loading dashboard data:", error);
+    notify("Failed to load data", "error");
   }
 
-  const nextId = Math.max(0, ...users.value.map((u) => u.id)) + 1;
-  users.value.push({
-    id: nextId,
-    name: newUser.name,
-    email: newUser.email,
-    role: newUser.role,
-    status: "invited",
-    lastActive: "Pending",
-  });
-
-  Object.assign(newUser, { name: "", email: "", role: "Teacher" as UserRole });
-  newUserDialog.value = false;
-  notify("Invitation sent", "success");
+  loading.value = false;
 }
 
-async function saveSettings() {
-  saving.value = true;
-  // mimic save delay
-  setTimeout(() => {
-    saving.value = false;
-    lastSaved.value = new Date().toLocaleString();
-    notify("Settings saved", "success");
-  }, 800);
-}
-
-function resetSettings() {
-  Object.assign(settings, {
-    schoolName: "SmartGrade Academy",
-    academicYear: "2025-2026",
-    gradingScale: "Percentage",
-    term: "2nd Semester",
-    timezone: "Asia/Manila",
-    enableNotifications: true,
-    enableTwoFactor: true,
-  });
-  notify("Settings reset", "secondary");
-}
+onMounted(() => {
+  if (accessDenied.value) {
+    // Redirect after showing message
+    setTimeout(() => router.push("/"), 2000);
+  } else {
+    loadData();
+  }
+});
 </script>
 
 <style scoped>
-.dashboard-shell {
-  background: linear-gradient(135deg, #f4f6fb 0%, #eef2ff 100%);
-  min-height: 100vh;
-}
-
-.hero-card {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 35%, #0ea5e9 100%);
-  color: #fff;
-  border-radius: 16px;
-}
-
-.hero-content {
-  display: flex;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.stat-card {
-  border-radius: 14px;
-  padding: 1rem;
-}
-
-.gap-1 {
-  gap: 0.25rem;
+.h-100 {
+  height: 100%;
 }
 
 .gap-2 {
   gap: 0.5rem;
 }
 
-.gap-3 {
-  gap: 0.75rem;
-}
-
 .gap-4 {
   gap: 1rem;
-}
-
-.h-100 {
-  height: 100%;
 }
 </style>

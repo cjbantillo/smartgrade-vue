@@ -165,8 +165,8 @@ async function loadData() {
 
   if (enrollments) {
     grades.value = enrollments.map((e) => {
-      const sectionSubject = e.section_subjects as {
-        subjects: { subject_name: string };
+      const sectionSubject = e.section_subjects as unknown as {
+        subjects: { subject_name: string } | null;
       } | null;
       const gradeData = e.grades as { final_grade: number }[] | null;
 
@@ -179,18 +179,18 @@ async function loadData() {
   }
 
   // Update stats
-  stats.value[0].value = String(grades.value.length);
+  if (stats.value[0]) stats.value[0].value = String(grades.value.length);
 
   const validGrades = grades.value.filter((g) => g.final_grade !== null);
   if (validGrades.length > 0) {
     const avg =
       validGrades.reduce((sum, g) => sum + (g.final_grade ?? 0), 0) /
       validGrades.length;
-    stats.value[1].value = avg.toFixed(2);
+    if (stats.value[1]) stats.value[1].value = avg.toFixed(2);
   }
 
   const passed = grades.value.filter((g) => (g.final_grade ?? 0) >= 75).length;
-  stats.value[2].value = String(passed);
+  if (stats.value[2]) stats.value[2].value = String(passed);
 
   // Count documents
   const { count } = await supabase
@@ -199,7 +199,7 @@ async function loadData() {
     .eq("student_id", student.student_id)
     .eq("is_active", true);
 
-  stats.value[3].value = String(count ?? 0);
+  if (stats.value[3]) stats.value[3].value = String(count ?? 0);
 }
 </script>
 
