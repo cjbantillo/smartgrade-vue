@@ -1,15 +1,49 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { supabase } from "@/lib/supabase";
 
 const route = useRoute();
 const authStore = useAuthStore();
 const drawer = ref(true);
 
+// School branding
+const schoolName = ref("SMARTGRADE");
+const schoolLogo = ref("");
+
 onMounted(() => {
   authStore.initialize();
 });
+
+// Fetch school settings when authenticated
+watch(
+  () => authStore.isAuthenticated,
+  async (isAuth) => {
+    if (isAuth) {
+      await fetchSchoolSettings();
+    }
+  },
+  { immediate: true }
+);
+
+async function fetchSchoolSettings() {
+  const { data } = await supabase
+    .from("schools")
+    .select("school_name, logo_path")
+    .limit(1)
+    .single();
+
+  if (data) {
+    schoolName.value = data.school_name || "SMARTGRADE";
+    if (data.logo_path) {
+      const { data: urlData } = supabase.storage
+        .from("logos")
+        .getPublicUrl(data.logo_path);
+      schoolLogo.value = urlData.publicUrl;
+    }
+  }
+}
 
 const isAuthPage = computed(() => route.path === "/login");
 
@@ -60,13 +94,14 @@ const showSidebar = computed(
     <v-navigation-drawer v-if="showSidebar" v-model="drawer" app width="260">
       <v-list-item class="pa-4">
         <template #prepend>
-          <v-avatar color="primary" size="42">
-            <v-icon color="white">mdi-school</v-icon>
+          <v-avatar color="primary" size="42" rounded>
+            <v-img v-if="schoolLogo" :src="schoolLogo" cover />
+            <v-icon v-else color="white">mdi-school</v-icon>
           </v-avatar>
         </template>
-        <v-list-item-title class="text-h6 font-weight-bold"
-          >SMARTGRADE</v-list-item-title
-        >
+        <v-list-item-title class="text-h6 font-weight-bold">{{
+          schoolName
+        }}</v-list-item-title>
         <v-list-item-subtitle class="text-caption">{{
           authStore.role?.toUpperCase()
         }}</v-list-item-subtitle>
@@ -105,7 +140,12 @@ const showSidebar = computed(
     <!-- App Bar -->
     <v-app-bar v-if="showSidebar" app color="primary" elevation="2">
       <v-app-bar-nav-icon @click="drawer = !drawer" />
-      <v-app-bar-title class="font-weight-bold">SMARTGRADE</v-app-bar-title>
+      <v-avatar v-if="schoolLogo" size="32" class="mr-2" rounded>
+        <v-img :src="schoolLogo" cover />
+      </v-avatar>
+      <v-app-bar-title class="font-weight-bold">{{
+        schoolName
+      }}</v-app-bar-title>
       <v-spacer />
       <v-chip variant="tonal" color="white" class="mr-2">
         <v-icon start size="18">mdi-account</v-icon>
