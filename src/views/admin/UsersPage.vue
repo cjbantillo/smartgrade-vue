@@ -270,7 +270,9 @@ async function fetchUsers() {
   loading.value = true;
   const { data, error } = await supabase
     .from("users")
-    .select("user_id, email, first_name, last_name, role, is_active, school_id, lrn, employee_no")
+    .select(
+      "user_id, email, first_name, last_name, role, is_active, school_id, lrn, employee_no"
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
