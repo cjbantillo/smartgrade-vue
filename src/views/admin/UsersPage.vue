@@ -268,17 +268,42 @@ function notify(message: string, color = "success") {
 
 async function fetchUsers() {
   loading.value = true;
+
+  // Fetch users with related teacher/student data
   const { data, error } = await supabase
     .from("users")
     .select(
-      "user_id, email, first_name, last_name, role, is_active, school_id, lrn, employee_no"
+      `
+      user_id, 
+      email, 
+      role, 
+      is_active, 
+      school_id,
+      teachers (first_name, last_name, employee_no),
+      students (first_name, last_name, lrn)
+    `
     )
     .order("created_at", { ascending: false });
 
   if (error) {
     notify(error.message, "error");
   } else {
-    users.value = data || [];
+    // Transform data to flatten teacher/student fields
+    users.value = (data || []).map((user: any) => {
+      const teacher = user.teachers?.[0];
+      const student = user.students?.[0];
+      return {
+        user_id: user.user_id,
+        email: user.email,
+        role: user.role,
+        is_active: user.is_active,
+        school_id: user.school_id,
+        first_name: teacher?.first_name || student?.first_name || null,
+        last_name: teacher?.last_name || student?.last_name || null,
+        employee_no: teacher?.employee_no || null,
+        lrn: student?.lrn || null,
+      };
+    });
   }
   loading.value = false;
 }
