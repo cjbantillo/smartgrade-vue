@@ -91,11 +91,43 @@
               :rules="[rules.required, rules.email]"
               density="comfortable"
             />
+            <v-row>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="form.first_name"
+                  label="First Name"
+                  :rules="[rules.required]"
+                  density="comfortable"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="form.last_name"
+                  label="Last Name"
+                  :rules="[rules.required]"
+                  density="comfortable"
+                />
+              </v-col>
+            </v-row>
             <v-select
               v-model="form.role"
               :items="['ADMIN', 'TEACHER', 'STUDENT']"
               label="Role"
               :rules="[rules.required]"
+              density="comfortable"
+            />
+            <!-- Student-specific fields -->
+            <v-text-field
+              v-if="form.role === 'STUDENT'"
+              v-model="form.lrn"
+              label="LRN (Learner Reference Number)"
+              density="comfortable"
+            />
+            <!-- Teacher-specific fields -->
+            <v-text-field
+              v-if="form.role === 'TEACHER'"
+              v-model="form.employee_no"
+              label="Employee Number"
               density="comfortable"
             />
             <v-text-field
@@ -105,6 +137,8 @@
               type="password"
               :rules="[rules.required, rules.minLength]"
               density="comfortable"
+              hint="Use: admin123, teacher123, or password"
+              persistent-hint
             />
             <v-switch v-model="form.is_active" label="Active" color="success" />
           </v-form>
@@ -156,9 +190,13 @@ import { supabase } from "@/lib/supabase";
 interface User {
   user_id: number;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
   is_active: boolean;
   school_id: number;
+  lrn: string | null;
+  employee_no: string | null;
 }
 
 const headers = [
@@ -190,10 +228,14 @@ const snackbarColor = ref("success");
 const form = ref({
   user_id: 0,
   email: "",
+  first_name: "",
+  last_name: "",
   role: "TEACHER",
   password: "",
   is_active: true,
   school_id: 1,
+  lrn: "",
+  employee_no: "",
 });
 
 const rules = {
@@ -228,7 +270,9 @@ async function fetchUsers() {
   loading.value = true;
   const { data, error } = await supabase
     .from("users")
-    .select("user_id, email, role, is_active, school_id")
+    .select(
+      "user_id, email, first_name, last_name, role, is_active, school_id, lrn, employee_no"
+    )
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -242,16 +286,27 @@ async function fetchUsers() {
 function openDialog(user?: User) {
   if (user) {
     editMode.value = true;
-    form.value = { ...user, password: "" };
+    form.value = {
+      ...user,
+      password: "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      lrn: user.lrn || "",
+      employee_no: user.employee_no || "",
+    };
   } else {
     editMode.value = false;
     form.value = {
       user_id: 0,
       email: "",
+      first_name: "",
+      last_name: "",
       role: "TEACHER",
       password: "",
       is_active: true,
       school_id: 1,
+      lrn: "",
+      employee_no: "",
     };
   }
   dialog.value = true;
@@ -292,21 +347,67 @@ async function saveUser() {
     const passwordHash =
       passwordHashes[form.value.password] || passwordHashes["password"];
 
-    const { error } = await supabase.from("users").insert({
-      email: form.value.email.toLowerCase().trim(),
-      role: form.value.role,
-      password_hash: passwordHash,
-      is_active: form.value.is_active,
-      school_id: form.value.school_id,
-    });
+    // Step 1: Create user in users table
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .insert({
+        email: form.value.email.toLowerCase().trim(),
+        role: form.value.role,
+        password_hash: passwordHash,
+        is_active: form.value.is_active,
+        school_id: form.value.school_id,
+      })
+      .select("user_id")
+      .single();
 
-    if (error) {
-      notify(error.message, "error");
-    } else {
-      notify("User created successfully");
-      dialog.value = false;
-      fetchUsers();
+    if (userError) {
+      notify(userError.message, "error");
+      saving.value = false;
+      return;
     }
+
+    // Step 2: Create corresponding record in teachers or students table
+    if (form.value.role === "TEACHER") {
+      const { error: teacherError } = await supabase.from("teachers").insert({
+        user_id: userData.user_id,
+        first_name: form.value.first_name,
+        last_name: form.value.last_name,
+        employee_no: form.value.employee_no || null,
+        is_active: true,
+      });
+
+      if (teacherError) {
+        notify(
+          `User created but teacher profile failed: ${teacherError.message}`,
+          "warning"
+        );
+      } else {
+        notify("User and teacher profile created successfully");
+      }
+    } else if (form.value.role === "STUDENT") {
+      const { error: studentError } = await supabase.from("students").insert({
+        user_id: userData.user_id,
+        first_name: form.value.first_name,
+        last_name: form.value.last_name,
+        lrn: form.value.lrn || null,
+        status: "active",
+      });
+
+      if (studentError) {
+        notify(
+          `User created but student profile failed: ${studentError.message}`,
+          "warning"
+        );
+      } else {
+        notify("User and student profile created successfully");
+      }
+    } else {
+      // ADMIN - no additional profile needed
+      notify("Admin user created successfully");
+    }
+
+    dialog.value = false;
+    fetchUsers();
   }
   saving.value = false;
 }

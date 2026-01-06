@@ -18,6 +18,13 @@
               @submit.prevent="saveSettings"
             >
               <v-text-field
+                v-model="form.school_code"
+                label="School Code"
+                :rules="[rules.required]"
+                density="comfortable"
+                class="mb-2"
+              />
+              <v-text-field
                 v-model="form.school_name"
                 label="School Name"
                 :rules="[rules.required]"
@@ -32,19 +39,13 @@
                 class="mb-2"
               />
               <v-text-field
-                v-model="form.school_address"
+                v-model="form.address"
                 label="School Address"
                 density="comfortable"
                 class="mb-2"
               />
               <v-text-field
-                v-model="form.contact_number"
-                label="Contact Number"
-                density="comfortable"
-                class="mb-2"
-              />
-              <v-text-field
-                v-model="form.email"
+                v-model="form.school_email"
                 label="School Email"
                 type="email"
                 density="comfortable"
@@ -58,7 +59,11 @@
               </div>
               <div class="d-flex align-center gap-4 mb-4">
                 <v-avatar size="80" color="grey-lighten-3" rounded>
-                  <v-img v-if="logoPreview" :src="logoPreview" />
+                  <v-img
+                    v-if="logoPreview"
+                    :src="logoPreview"
+                    @error="handleImageError"
+                  />
                   <v-icon v-else size="40" color="grey">mdi-image</v-icon>
                 </v-avatar>
                 <div>
@@ -74,6 +79,16 @@
                     @update:model-value="previewLogo"
                   />
                   <div class="text-caption text-grey">PNG or JPG, max 2MB</div>
+                  <div
+                    v-if="form.logo_path"
+                    class="text-caption text-success mt-1"
+                  >
+                    <v-icon size="small">mdi-check</v-icon> Logo saved:
+                    {{ form.logo_path }}
+                  </div>
+                  <div v-else class="text-caption text-warning mt-1">
+                    <v-icon size="small">mdi-alert</v-icon> No logo uploaded yet
+                  </div>
                 </div>
               </div>
 
@@ -97,14 +112,23 @@
           <v-card-title>Preview</v-card-title>
           <v-card-text class="text-center">
             <v-avatar size="100" color="grey-lighten-3" rounded class="mb-4">
-              <v-img v-if="logoPreview" :src="logoPreview" />
+              <v-img
+                v-if="logoPreview"
+                :src="logoPreview"
+                cover
+                @error="onLogoError"
+              >
+                <template #placeholder>
+                  <v-icon size="50" color="grey">mdi-school</v-icon>
+                </template>
+              </v-img>
               <v-icon v-else size="50" color="grey">mdi-school</v-icon>
             </v-avatar>
             <h3 class="text-h6 font-weight-bold">
               {{ form.school_name || "School Name" }}
             </h3>
             <p class="text-body-2 text-grey">
-              {{ form.school_address || "School Address" }}
+              {{ form.address || "School Address" }}
             </p>
             <v-divider class="my-3" />
             <p class="text-body-2">
@@ -171,12 +195,12 @@ const snackbarText = ref("");
 const snackbarColor = ref("success");
 
 const form = ref({
-  id: 1,
+  school_id: 1,
+  school_code: "",
   school_name: "",
   principal_name: "",
-  school_address: "",
-  contact_number: "",
-  email: "",
+  address: "",
+  school_email: "",
   logo_path: "",
 });
 
@@ -205,6 +229,17 @@ function previewLogo() {
   }
 }
 
+function handleImageError() {
+  console.error("Failed to load image from URL:", logoPreview.value);
+  notify("Failed to load logo image", "warning");
+}
+
+function onLogoError() {
+  console.error("Logo failed to load:", logoPreview.value);
+  // Clear the preview if it fails to load
+  logoPreview.value = "";
+}
+
 async function fetchSettings() {
   const { data, error } = await supabase
     .from("schools")
@@ -212,33 +247,48 @@ async function fetchSettings() {
     .limit(1)
     .single();
 
+  console.log("Fetched school data:", data);
+  console.log("Fetch error:", error);
+
   if (error) {
     // Create default if not exists
     console.log("No school settings found, using defaults");
   } else if (data) {
     form.value = {
-      id: data.id,
+      school_id: data.school_id,
+      school_code: data.school_code || "",
       school_name: data.school_name || "",
       principal_name: data.principal_name || "",
-      school_address: data.school_address || "",
-      contact_number: data.contact_number || "",
-      email: data.email || "",
+      address: data.address || "",
+      school_email: data.school_email || "",
       logo_path: data.logo_path || "",
     };
+
+    console.log("Logo path from DB:", data.logo_path);
+
     if (data.logo_path) {
       const { data: urlData } = supabase.storage
         .from("logos")
         .getPublicUrl(data.logo_path);
+
+      console.log("Generated public URL:", urlData.publicUrl);
       logoPreview.value = urlData.publicUrl;
+    } else {
+      console.log("No logo_path in database");
+      logoPreview.value = "";
     }
   }
 }
 
 async function fetchStats() {
   const [usersRes, studentsRes, teachersRes] = await Promise.all([
-    supabase.from("users").select("id", { count: "exact", head: true }),
-    supabase.from("students").select("id", { count: "exact", head: true }),
-    supabase.from("teachers").select("id", { count: "exact", head: true }),
+    supabase.from("users").select("user_id", { count: "exact", head: true }),
+    supabase
+      .from("students")
+      .select("student_id", { count: "exact", head: true }),
+    supabase
+      .from("teachers")
+      .select("teacher_id", { count: "exact", head: true }),
   ]);
 
   stats.value = {
@@ -252,44 +302,93 @@ async function saveSettings() {
   if (!valid.value) return;
   saving.value = true;
 
+  console.log("=== SAVE SETTINGS STARTED ===");
+  console.log("Logo file selected:", logoFile.value);
+
   let logoPath = form.value.logo_path;
 
   // Upload logo if new file selected
-  if (logoFile.value && logoFile.value.length > 0) {
-    const file = logoFile.value[0];
+  // Note: v-file-input returns a File object directly, not an array
+  if (logoFile.value && logoFile.value instanceof File) {
+    const file = logoFile.value;
+    console.log("File to upload:", file);
+
     if (file) {
-      const fileName = `logo_${Date.now()}.${file.name.split(".").pop()}`;
+      const fileExt = file.name.split(".").pop();
+      const fileName = `school_logo_${Date.now()}.${fileExt}`;
+
+      console.log("Uploading file:", fileName, "Size:", file.size);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("logos")
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
 
       if (uploadError) {
-        notify(uploadError.message, "error");
+        console.error("Upload error:", uploadError);
+        notify(`Upload failed: ${uploadError.message}`, "error");
         saving.value = false;
         return;
       }
+
+      console.log("Upload successful:", uploadData);
       logoPath = uploadData.path;
+      console.log("Logo path set to:", logoPath);
+
+      // Get the public URL immediately after upload
+      const { data: urlData } = supabase.storage
+        .from("logos")
+        .getPublicUrl(logoPath);
+
+      console.log("Public URL:", urlData.publicUrl);
+      logoPreview.value = urlData.publicUrl;
     }
+  } else {
+    console.log("No new file selected, keeping existing logo_path:", logoPath);
   }
 
   const payload = {
+    school_code: form.value.school_code,
     school_name: form.value.school_name,
     principal_name: form.value.principal_name,
-    school_address: form.value.school_address,
-    contact_number: form.value.contact_number,
-    email: form.value.email,
+    address: form.value.address,
+    school_email: form.value.school_email,
     logo_path: logoPath,
   };
 
-  const { error } = await supabase
+  console.log("Saving payload:", payload);
+
+  // Check if school exists first
+  const { data: existingSchool } = await supabase
     .from("schools")
-    .upsert({ id: form.value.id, ...payload });
+    .select("school_id")
+    .eq("school_id", form.value.school_id)
+    .single();
+
+  let error;
+  if (existingSchool) {
+    // Update existing
+    const result = await supabase
+      .from("schools")
+      .update(payload)
+      .eq("school_id", form.value.school_id);
+    error = result.error;
+  } else {
+    // Insert new
+    const result = await supabase
+      .from("schools")
+      .insert({ school_id: form.value.school_id, ...payload });
+    error = result.error;
+  }
 
   if (error) {
     notify(error.message, "error");
   } else {
     notify("Settings saved successfully");
+    // Clear the file input
+    logoFile.value = [];
     fetchSettings();
   }
   saving.value = false;
