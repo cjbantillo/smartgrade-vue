@@ -25,13 +25,18 @@
         />
       </v-col>
       <v-col cols="12" md="8" class="d-flex align-center">
-        <v-chip v-if="selectedSection" color="info" variant="tonal" class="mr-2">
+        <v-chip
+          v-if="selectedSection"
+          color="info"
+          variant="tonal"
+          class="mr-2"
+        >
           <v-icon start>mdi-account-multiple</v-icon>
           {{ students.length }} Students
         </v-chip>
         <v-chip v-if="selectedSection" color="success" variant="tonal">
           <v-icon start>mdi-file-document-check</v-icon>
-          {{ students.filter(s => s.sf9_count > 0).length }} with SF9
+          {{ students.filter((s) => s.sf9_count > 0).length }} with SF9
         </v-chip>
       </v-col>
     </v-row>
@@ -67,7 +72,9 @@
             >
               <template v-slot:item.name="{ item }">
                 <div>
-                  <span class="font-weight-medium">{{ item.first_name }} {{ item.last_name }}</span>
+                  <span class="font-weight-medium"
+                    >{{ item.first_name }} {{ item.last_name }}</span
+                  >
                 </div>
               </template>
 
@@ -77,7 +84,7 @@
                   size="small"
                   variant="tonal"
                 >
-                  {{ item.sf9_count }} SF9{{ item.sf9_count !== 1 ? 's' : '' }}
+                  {{ item.sf9_count }} SF9{{ item.sf9_count !== 1 ? "s" : "" }}
                 </v-chip>
               </template>
 
@@ -125,7 +132,9 @@
             </v-data-table>
 
             <div v-else class="text-center py-8 text-grey">
-              <v-icon size="64" color="grey-lighten-1">mdi-school-outline</v-icon>
+              <v-icon size="64" color="grey-lighten-1"
+                >mdi-school-outline</v-icon
+              >
               <p class="mt-4 text-h6">Select a section to manage documents</p>
             </div>
           </v-card-text>
@@ -148,7 +157,8 @@
             {{ studentToRevoke.first_name }} {{ studentToRevoke.last_name }}
           </p>
           <p class="text-body-2 text-grey mt-2">
-            This action will mark the document as inactive. The student will no longer be able to view this SF9.
+            This action will mark the document as inactive. The student will no
+            longer be able to view this SF9.
           </p>
         </v-card-text>
         <v-card-actions>
@@ -234,7 +244,12 @@ const snackbarColor = ref("success");
 const headers = [
   { title: "LRN", key: "lrn", width: "150px" },
   { title: "Name", key: "name", sortable: true },
-  { title: "SF9 Count", key: "sf9_count", align: "center" as const, width: "120px" },
+  {
+    title: "SF9 Count",
+    key: "sf9_count",
+    align: "center" as const,
+    width: "120px",
+  },
   { title: "Actions", key: "actions", sortable: false, width: "300px" },
 ];
 
@@ -302,10 +317,12 @@ async function loadStudents() {
   // Get students enrolled in this section
   const { data } = await supabase
     .from("enrollments")
-    .select(`
+    .select(
+      `
       student_id,
       students(student_id, lrn, first_name, last_name)
-    `)
+    `
+    )
     .in("section_subject_id", ssIds);
 
   // Deduplicate students
@@ -353,17 +370,22 @@ async function getSchoolInfo(): Promise<SchoolInfo | null> {
 async function getStudentGrades(studentId: number): Promise<GradeData[]> {
   const { data } = await supabase
     .from("enrollments")
-    .select(`
+    .select(
+      `
       semester_id,
       section_subjects(subjects(subject_name)),
       grades(final_grade)
-    `)
+    `
+    )
     .eq("student_id", studentId);
 
   if (!data) return [];
 
   // Group grades by subject
-  const subjectGrades: Record<string, { sem1: number | null; sem2: number | null }> = {};
+  const subjectGrades: Record<
+    string,
+    { sem1: number | null; sem2: number | null }
+  > = {};
 
   data.forEach((e: any) => {
     const subjectName = e.section_subjects?.subjects?.subject_name || "Unknown";
@@ -385,23 +407,26 @@ async function getStudentGrades(studentId: number): Promise<GradeData[]> {
     subject,
     sem1: g.sem1,
     sem2: g.sem2,
-    final: g.sem1 !== null && g.sem2 !== null
-      ? Math.round((g.sem1 + g.sem2) / 2)
-      : g.sem1 ?? g.sem2,
+    final:
+      g.sem1 !== null && g.sem2 !== null
+        ? Math.round((g.sem1 + g.sem2) / 2)
+        : g.sem1 ?? g.sem2,
   }));
 }
 
 async function getStudentInfo(studentId: number) {
   const { data } = await supabase
     .from("students")
-    .select(`
+    .select(
+      `
       lrn, first_name, last_name, gender,
       enrollments(
         section_subjects(
           sections(name, school_years(year_label))
         )
       )
-    `)
+    `
+    )
     .eq("student_id", studentId)
     .single();
 
@@ -439,7 +464,9 @@ async function generateSF9(student: Student) {
     // Header
     pdf.setFontSize(14);
     pdf.setFont("helvetica", "bold");
-    pdf.text(schoolInfo.school_name || "School Name", pageWidth / 2, y, { align: "center" });
+    pdf.text(schoolInfo.school_name || "School Name", pageWidth / 2, y, {
+      align: "center",
+    });
     y += 6;
 
     pdf.setFontSize(10);
@@ -449,12 +476,16 @@ async function generateSF9(student: Student) {
 
     pdf.setFontSize(12);
     pdf.setFont("helvetica", "bold");
-    pdf.text("LEARNER'S PROGRESS REPORT CARD", pageWidth / 2, y, { align: "center" });
+    pdf.text("LEARNER'S PROGRESS REPORT CARD", pageWidth / 2, y, {
+      align: "center",
+    });
     y += 5;
 
     pdf.setFontSize(9);
     pdf.setFont("helvetica", "normal");
-    pdf.text("School Form 9 (SF9) - Senior High School", pageWidth / 2, y, { align: "center" });
+    pdf.text("School Form 9 (SF9) - Senior High School", pageWidth / 2, y, {
+      align: "center",
+    });
     y += 12;
 
     // Student Info
@@ -466,12 +497,20 @@ async function generateSF9(student: Student) {
     pdf.text(`Grade Level: Grade 11`, rightCol, y);
     y += 6;
 
-    pdf.text(`Name: ${studentInfo.first_name} ${studentInfo.last_name}`, leftCol, y);
+    pdf.text(
+      `Name: ${studentInfo.first_name} ${studentInfo.last_name}`,
+      leftCol,
+      y
+    );
     pdf.text(`Section: ${section?.name || "N/A"}`, rightCol, y);
     y += 6;
 
     pdf.text(`Gender: ${studentInfo.gender || "N/A"}`, leftCol, y);
-    pdf.text(`School Year: ${section?.school_years?.year_label || "N/A"}`, rightCol, y);
+    pdf.text(
+      `School Year: ${section?.school_years?.year_label || "N/A"}`,
+      rightCol,
+      y
+    );
     y += 12;
 
     // Grades Table
@@ -480,9 +519,22 @@ async function generateSF9(student: Student) {
     const COL_W_SEM2 = 25;
     const COL_W_FINAL = 25;
     const COL_W_REMARKS = 25;
-    const totalTableWidth = COL_W_SUBJECT + COL_W_SEM1 + COL_W_SEM2 + COL_W_FINAL + COL_W_REMARKS;
-    const tableHeaders = ["Learning Areas", "1st Sem", "2nd Sem", "Final", "Remarks"];
-    const colWidthsArr = [COL_W_SUBJECT, COL_W_SEM1, COL_W_SEM2, COL_W_FINAL, COL_W_REMARKS];
+    const totalTableWidth =
+      COL_W_SUBJECT + COL_W_SEM1 + COL_W_SEM2 + COL_W_FINAL + COL_W_REMARKS;
+    const tableHeaders = [
+      "Learning Areas",
+      "1st Sem",
+      "2nd Sem",
+      "Final",
+      "Remarks",
+    ];
+    const colWidthsArr = [
+      COL_W_SUBJECT,
+      COL_W_SEM1,
+      COL_W_SEM2,
+      COL_W_FINAL,
+      COL_W_REMARKS,
+    ];
 
     // Table header
     pdf.setFillColor(63, 81, 181);
@@ -524,7 +576,10 @@ async function generateSF9(student: Student) {
     // General Average
     const validGrades = grades.filter((g) => g.final !== null);
     const avgFinal = validGrades.length
-      ? (validGrades.reduce((sum, g) => sum + (g.final ?? 0), 0) / validGrades.length).toFixed(2)
+      ? (
+          validGrades.reduce((sum, g) => sum + (g.final ?? 0), 0) /
+          validGrades.length
+        ).toFixed(2)
       : "N/A";
 
     y += 4;
@@ -552,7 +607,11 @@ async function generateSF9(student: Student) {
     pdf.text("Parent/Guardian", pageWidth / 2 - 10, y + 5);
 
     pdf.line(pageWidth - 70, y, pageWidth - 20, y);
-    pdf.text(schoolInfo.principal_name || "School Principal", pageWidth - 65, y + 5);
+    pdf.text(
+      schoolInfo.principal_name || "School Principal",
+      pageWidth - 65,
+      y + 5
+    );
     pdf.text("School Principal", pageWidth - 55, y + 10);
 
     // Footer
@@ -620,7 +679,9 @@ async function generateSF9(student: Student) {
       target_id: student.student_id,
     });
 
-    notify(`SF9 v${newVersion} generated successfully for ${student.first_name}`);
+    notify(
+      `SF9 v${newVersion} generated successfully for ${student.first_name}`
+    );
     await loadStudents();
   } catch (error) {
     console.error("Error generating SF9:", error);

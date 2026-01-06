@@ -197,8 +197,8 @@ async function fetchSections() {
     .from("sections")
     .select(
       `
-      id, name, adviser_teacher_id, school_year_id,
-      teachers(user_id, users(first_name, last_name)),
+      section_id, name, adviser_teacher_id, school_year_id,
+      adviser:teachers!adviser_teacher_id(teacher_id, first_name, last_name),
       school_years(year_label)
     `
     )
@@ -209,8 +209,9 @@ async function fetchSections() {
   } else {
     sections.value = (data || []).map((s: any) => ({
       ...s,
-      adviser_name: s.teachers?.users
-        ? `${s.teachers.users.first_name} ${s.teachers.users.last_name}`
+      id: s.section_id,
+      adviser_name: s.adviser
+        ? `${s.adviser.first_name} ${s.adviser.last_name}`
         : null,
       school_year: s.school_years?.year_label,
     }));
@@ -221,23 +222,24 @@ async function fetchSections() {
 async function fetchTeachers() {
   const { data } = await supabase
     .from("teachers")
-    .select("id, users(first_name, last_name)");
+    .select("teacher_id, first_name, last_name");
 
   teachers.value = (data || []).map((t: any) => ({
-    id: t.id,
-    full_name: t.users
-      ? `${t.users.first_name} ${t.users.last_name}`
-      : "Unknown",
+    id: t.teacher_id,
+    full_name: `${t.first_name || ""} ${t.last_name || ""}`.trim() || "Unknown",
   }));
 }
 
 async function fetchSchoolYears() {
   const { data } = await supabase
     .from("school_years")
-    .select("id, year_label")
+    .select("school_year_id, year_label")
     .order("year_label", { ascending: false });
 
-  schoolYears.value = data || [];
+  schoolYears.value = (data || []).map((sy: any) => ({
+    id: sy.school_year_id,
+    year_label: sy.year_label,
+  }));
 }
 
 function openDialog(section?: Section) {
@@ -275,7 +277,7 @@ async function saveSection() {
     const { error } = await supabase
       .from("sections")
       .update(payload)
-      .eq("id", form.value.id);
+      .eq("section_id", form.value.id);
 
     if (error) {
       notify(error.message, "error");
@@ -310,7 +312,7 @@ async function deleteSection() {
   const { error } = await supabase
     .from("sections")
     .delete()
-    .eq("id", sectionToDelete.value.id);
+    .eq("section_id", sectionToDelete.value.id);
 
   if (error) {
     notify(error.message, "error");

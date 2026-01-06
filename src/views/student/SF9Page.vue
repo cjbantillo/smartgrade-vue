@@ -70,7 +70,9 @@
       <v-col cols="12">
         <v-alert type="warning" variant="tonal" class="mb-4">
           <v-alert-title>Preview Mode</v-alert-title>
-          Your official SF9 document has not been generated yet. Below is a preview based on your current grades. Please contact your adviser to generate your official SF9.
+          Your official SF9 document has not been generated yet. Below is a
+          preview based on your current grades. Please contact your adviser to
+          generate your official SF9.
         </v-alert>
 
         <v-card elevation="4">
@@ -86,12 +88,16 @@
                   <v-icon v-else size="48" color="primary">mdi-school</v-icon>
                 </v-avatar>
                 <h2 class="text-h5 font-weight-bold">{{ schoolInfo.name }}</h2>
-                <p class="text-subtitle-2 text-grey">{{ schoolInfo.address }}</p>
+                <p class="text-subtitle-2 text-grey">
+                  {{ schoolInfo.address }}
+                </p>
                 <v-divider class="my-4" />
                 <h3 class="text-h6 font-weight-bold text-primary">
                   LEARNER'S PROGRESS REPORT CARD
                 </h3>
-                <p class="text-body-2">School Form 9 (SF9) - Senior High School</p>
+                <p class="text-body-2">
+                  School Form 9 (SF9) - Senior High School
+                </p>
               </div>
 
               <!-- Student Info -->
@@ -118,12 +124,18 @@
                   <v-table density="compact">
                     <tbody>
                       <tr>
-                        <td class="text-grey" style="width: 120px">Grade Level</td>
-                        <td class="font-weight-bold">{{ studentInfo.grade_level }}</td>
+                        <td class="text-grey" style="width: 120px">
+                          Grade Level
+                        </td>
+                        <td class="font-weight-bold">
+                          {{ studentInfo.grade_level }}
+                        </td>
                       </tr>
                       <tr>
                         <td class="text-grey">Section</td>
-                        <td class="font-weight-bold">{{ studentInfo.section }}</td>
+                        <td class="font-weight-bold">
+                          {{ studentInfo.section }}
+                        </td>
                       </tr>
                       <tr>
                         <td class="text-grey">School Year</td>
@@ -150,9 +162,17 @@
                     <td>{{ grade.subject }}</td>
                     <td class="text-center">{{ grade.sem1 ?? "N/A" }}</td>
                     <td class="text-center">{{ grade.sem2 ?? "N/A" }}</td>
-                    <td class="text-center font-weight-bold">{{ grade.final ?? "N/A" }}</td>
+                    <td class="text-center font-weight-bold">
+                      {{ grade.final ?? "N/A" }}
+                    </td>
                     <td class="text-center">
-                      <span :class="(grade.final ?? 0) >= 75 ? 'text-success' : 'text-error'">
+                      <span
+                        :class="
+                          (grade.final ?? 0) >= 75
+                            ? 'text-success'
+                            : 'text-error'
+                        "
+                      >
                         {{ (grade.final ?? 0) >= 75 ? "PASSED" : "FAILED" }}
                       </span>
                     </td>
@@ -161,12 +181,22 @@
                 <tfoot>
                   <tr class="bg-grey-lighten-3">
                     <td class="font-weight-bold">General Average</td>
-                    <td class="text-center font-weight-bold">{{ sem1Average }}</td>
-                    <td class="text-center font-weight-bold">{{ sem2Average }}</td>
-                    <td class="text-center font-weight-bold text-primary text-h6">{{ finalAverage }}</td>
+                    <td class="text-center font-weight-bold">
+                      {{ sem1Average }}
+                    </td>
+                    <td class="text-center font-weight-bold">
+                      {{ sem2Average }}
+                    </td>
+                    <td
+                      class="text-center font-weight-bold text-primary text-h6"
+                    >
+                      {{ finalAverage }}
+                    </td>
                     <td class="text-center">
                       <span class="text-success font-weight-bold">
-                        {{ Number(finalAverage) >= 75 ? "PROMOTED" : "RETAINED" }}
+                        {{
+                          Number(finalAverage) >= 75 ? "PROMOTED" : "RETAINED"
+                        }}
                       </span>
                     </td>
                   </tr>
@@ -182,7 +212,9 @@
     <v-row v-else>
       <v-col cols="12">
         <v-card elevation="4" class="text-center pa-8">
-          <v-icon size="80" color="grey" class="mb-4">mdi-file-document-outline</v-icon>
+          <v-icon size="80" color="grey" class="mb-4"
+            >mdi-file-document-outline</v-icon
+          >
           <h2 class="text-h5 font-weight-bold mb-2">No SF9 Available</h2>
           <p class="text-grey">
             Your SF9 has not been generated yet. Please contact your adviser.
@@ -191,7 +223,9 @@
       </v-col>
     </v-row>
 
-    <v-snackbar v-model="snackbar" :color="snackbarColor">{{ snackbarText }}</v-snackbar>
+    <v-snackbar v-model="snackbar" :color="snackbarColor">{{
+      snackbarText
+    }}</v-snackbar>
   </v-container>
 </template>
 
@@ -282,7 +316,8 @@ async function loadSchoolInfo() {
       address: data.address || "",
       principal: data.principal_name || "Principal",
       logo: data.logo_path
-        ? supabase.storage.from("logos").getPublicUrl(data.logo_path).data.publicUrl
+        ? supabase.storage.from("logos").getPublicUrl(data.logo_path).data
+            .publicUrl
         : "",
     };
   }
@@ -294,14 +329,16 @@ async function loadStudentInfo() {
 
   const { data: student } = await supabase
     .from("students")
-    .select(`
+    .select(
+      `
       student_id, lrn, first_name, last_name, gender,
       enrollments(
         section_subjects(
           sections(name, school_years(year_label))
         )
       )
-    `)
+    `
+    )
     .eq("user_id", userId)
     .single();
 
@@ -356,17 +393,22 @@ async function loadGrades() {
 
   const { data } = await supabase
     .from("enrollments")
-    .select(`
+    .select(
+      `
       semester_id,
       section_subjects(subjects(subject_name)),
       grades(final_grade)
-    `)
+    `
+    )
     .eq("student_id", studentId.value);
 
   if (!data) return;
 
   // Group grades by subject
-  const subjectGrades: Record<string, { sem1: number | null; sem2: number | null }> = {};
+  const subjectGrades: Record<
+    string,
+    { sem1: number | null; sem2: number | null }
+  > = {};
 
   data.forEach((e: any) => {
     const subjectName = e.section_subjects?.subjects?.subject_name || "Unknown";
@@ -438,18 +480,23 @@ async function addWatermarkToPdf(pdfBytes: ArrayBuffer): Promise<Blob> {
     });
 
     // Add footer with student info
-    page.drawText(`Student: ${studentInfo.value.name} | LRN: ${studentInfo.value.lrn}`, {
-      x: 50,
-      y: 15,
-      size: 8,
-      font,
-      color: rgb(0.5, 0.5, 0.5),
-      opacity: 0.8,
-    });
+    page.drawText(
+      `Student: ${studentInfo.value.name} | LRN: ${studentInfo.value.lrn}`,
+      {
+        x: 50,
+        y: 15,
+        size: 8,
+        font,
+        color: rgb(0.5, 0.5, 0.5),
+        opacity: 0.8,
+      }
+    );
   }
 
   const watermarkedBytes = await pdfDoc.save();
-  return new Blob([new Uint8Array(watermarkedBytes)], { type: "application/pdf" });
+  return new Blob([new Uint8Array(watermarkedBytes)], {
+    type: "application/pdf",
+  });
 }
 
 async function loadWatermarkedPdf() {
@@ -470,7 +517,7 @@ async function loadWatermarkedPdf() {
     // Add watermark using pdf-lib
     const pdfBytes = await data.arrayBuffer();
     const watermarkedBlob = await addWatermarkToPdf(pdfBytes);
-    
+
     watermarkedPdfBlob.value = watermarkedBlob;
     watermarkedPdfUrl.value = URL.createObjectURL(watermarkedBlob);
   } catch (error) {
