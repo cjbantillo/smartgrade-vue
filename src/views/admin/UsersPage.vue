@@ -190,9 +190,13 @@ import { supabase } from "@/lib/supabase";
 interface User {
   user_id: number;
   email: string;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
   is_active: boolean;
   school_id: number;
+  lrn: string | null;
+  employee_no: string | null;
 }
 
 const headers = [
@@ -266,7 +270,7 @@ async function fetchUsers() {
   loading.value = true;
   const { data, error } = await supabase
     .from("users")
-    .select("user_id, email, role, is_active, school_id")
+    .select("user_id, email, first_name, last_name, role, is_active, school_id, lrn, employee_no")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -280,7 +284,14 @@ async function fetchUsers() {
 function openDialog(user?: User) {
   if (user) {
     editMode.value = true;
-    form.value = { ...user, password: "" };
+    form.value = {
+      ...user,
+      password: "",
+      first_name: user.first_name || "",
+      last_name: user.last_name || "",
+      lrn: user.lrn || "",
+      employee_no: user.employee_no || "",
+    };
   } else {
     editMode.value = false;
     form.value = {
